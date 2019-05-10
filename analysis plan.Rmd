@@ -1,0 +1,50 @@
+---
+title: "analysis plan"
+author: "Jack Yan"
+date: "5/10/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r, warning=F}
+dat = read_csv("./data.csv")
+```
+
+# Create a test dataset
+```{r}
+
+```
+
+# Exploratory data analysis
+
+### Clustering (Unsupervised learning)
+### Correlation plots
+### One-to-one relation between classes and covariates
+
+# Model building, assessing performance, and variable importance
+
+## Linear methods
+### Logistic regression
+### regularized logistic regression (glmnet)
+### LDA
+## Non-linear methods
+### QDA
+### Naive Bayes
+### KNN
+## Classification Trees and Ensemble methods
+### a single tree
+### bagging
+### random forests
+### boosting (Adaboosting and binomial loss function)
+
+# Variable importance, Visualization, and interpretation (L7_2.rmd): PDP, ICE, etc.
+
+# Model comparison
+
+# Final model interpretation
+
+
