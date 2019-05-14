@@ -7,23 +7,82 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
+library(tidyverse) # data manipulation
+library(corrplot) # correlation plot
+library(caret) # model training
+
+# library(AppliedPredictiveModeling)
 ```
 
 ```{r, warning=F}
-dat = read_csv("./data.csv")
+dat = 
+  read_csv("./data.csv") %>% 
+  select(-id, -X33) 
+dim(dat)
 ```
 
 # Create a test dataset
-```{r}
+```{r, eval=FALSE}
+set.seed(123123)
+test_dat = sample_n(dat, 569/5)
+train_dat = anti_join(dat, test_dat)
+write_csv(train_dat, "train.csv")
+write_csv(test_dat, "test.csv")
+```
 
+# Load train and test data
+```{r}
+train_df = 
+  read_csv("./train.csv") %>% 
+  mutate(diagnosis = as_factor(diagnosis))
+test_df = 
+  read_csv("./test.csv")  %>% 
+  mutate(diagnosis = as_factor(diagnosis))
 ```
 
 # Exploratory data analysis
 
 ### Clustering (Unsupervised learning)
+```{r}
+
+```
+
 ### Correlation plots
+```{r}
+x <- model.matrix(diagnosis~., train_df)[,-1]
+y <- train_df$diagnosis
+theme1 <- trellis.par.get()
+theme1$plot.symbol$col <- rgb(.2, .4, .2, .5) 
+theme1$plot.symbol$pch <- 16
+theme1$plot.line$col <- rgb(.8, .1, .1, 1) 
+theme1$plot.line$lwd <- 2
+theme1$strip.background$col <- rgb(.0, .2, .6, .2) 
+trellis.par.set(theme1)
+# data_rename = 
+#   data %>% 
+#   rename(income = income_composition_of_resources,
+#          per_expend = percentage_expenditure,
+#          to_expend = total_expenditure,
+#          death5 = under_five_deaths,
+#          thin5_9 = thinness_5_9_years,
+#          thin1_19 = thinness_1_19_years)
+x_rename <- model.matrix(life_expectancy~., data_rename)[,-1]
+
+par(cex = 0.7)
+corrplot(cor(x), tl.srt = 45, order = 'hclust', type = 'upper')
+```
+
 ### One-to-one relation between classes and covariates
+```{r}
+# Distribution of response classes with regard to each variable
+transparentTheme(trans = .4)
+featurePlot(x = train_df[,2:11], 
+            y = train_df$diagnosis,
+            scales = list(x = list(relation="free"), 
+                          y = list(relation="free")),
+            plot = "density", pch = "|",
+            auto.key = list(columns = 2))
+```
 
 # Model building, assessing performance, and variable importance
 
@@ -31,10 +90,12 @@ dat = read_csv("./data.csv")
 ### Logistic regression
 ### regularized logistic regression (glmnet)
 ### LDA
+
 ## Non-linear methods
 ### QDA
 ### Naive Bayes
 ### KNN
+
 ## Classification Trees and Ensemble methods
 ### a single tree
 ### bagging
