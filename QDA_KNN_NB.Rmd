@@ -113,3 +113,86 @@ modelNames <- c("qda","nb","knn")
 legend("bottomright", legend = paste0(modelNames, ": ", round(auc,3)),
        col = 1:6, lwd = 2)
 ```
+
+
+##Linear Kernel
+```{r}
+##Linear Kernel
+ctrl <- trainControl(method = "cv")
+set.seed(1)
+svml.fit <- train(diagnosis~., 
+                  data = train_df, 
+                  method = "svmLinear2",
+                  preProcess = c("center", "scale"),
+                  tuneGrid = data.frame(cost = exp(seq(-2,4,len=50))),
+                  trControl = ctrl)
+
+ggplot(svml.fit, highlight = TRUE)
+```
+
+Linear Kernel Training Error Rate
+```{r}
+pred.svml.train <- predict(svml.fit)
+mean(pred.svml.train != train_df$diagnosis)
+```
+**The training error rate for linear kernel is 0.0088.**
+
+Linear Kernel Test Error Rate
+```{r}
+
+pred.svml.test <- predict(svml.fit, newdata = test_df)
+mean(pred.svml.test != test_df$diagnosis)
+```
+**The testing error rate for linear kernel is 0.0265.**
+
+
+**b)Radial Kernel**  Fit a support vector machine with a radial kernel to the training data.  What are thetraining and test error rates?
+```{r}
+svmr.grid <- expand.grid(C = exp(seq(-2,6,len=10)),
+                         sigma = exp(seq(-8,-3,len=5)))
+set.seed(1)
+svmr.fit <- train(diagnosis~., 
+                  data = train_df, 
+                  method = "svmRadial",
+                  preProcess = c("center", "scale"),
+                  tuneGrid = svmr.grid,
+                  trControl = ctrl)
+
+ggplot(svmr.fit, highlight = TRUE)
+```
+
+## Radial Kernel Training Error Rate
+```{r}
+pred.svmr.train <- predict(svmr.fit)
+mean(pred.svmr.train != train_df$diagnosis)
+```
+**The training error rate for radial kernel is 0.011.**
+
+## Raidal Kernel Test Error Rate
+```{r}
+pred.svmr.test <- predict(svmr.fit, newdata = test_df)
+mean(pred.svmr.test != test_df$diagnosis)
+```
+**The testing error rati for radial kernel is 0.0177.**
+
+
+##(c) Which approach seems to give a better result on this data?
+```{r}
+resamp <- resamples(list(svmr = svmr.fit, svml = svml.fit))
+bwplot(resamp)
+```
+**Acccording to the plot, we can tell that radial kernal has higher accuracy and Kappa compared to linear kernal.**
+
+```{r}
+confusionMatrix(data = pred.svml.test, 
+                reference = test_df$diagnosis)
+
+confusionMatrix(data = pred.svmr.test, 
+                reference = test_df$diagnosis)
+
+```
+**According to the confusion matrix,the radial kernel has higher sensitivity, specificity, PPV, NPV and Kappa compared to those of the linear kernel.**
+**In conclusion, the radial kernel seems to give a better result on the data.**
+
+
+
