@@ -115,6 +115,16 @@ formula3 <-
 ## Linear methods
 ### Logistic Regression
 ```{r, warning=FALSE}
+ctrl <- trainControl(method = "repeatedcv",
+                     summaryFunction = twoClassSummary,
+                     classProbs = TRUE)
+set.seed(123123)
+model.glm <-train(x=train_df[,2:31],
+                  y=train_df$diagnosis,
+                  method ="glm",
+                  metric ="ROC",
+                  trControl =ctrl)
+
 glm.fit <- glm(diagnosis~., data=train_df, family="binomial")
 # summary(glm.fit)
 
@@ -134,13 +144,6 @@ plot(roc.glm.test, legacy.axes = TRUE, print.auc = TRUE)
 
 
 ### Regularized Logistic Regression
-```{r}
-ctrl <- trainControl(method = "repeatedcv",
-                    repeats = 5,
-                    summaryFunction = twoClassSummary,
-                    classProbs = TRUE)
-```
-
 ```{r, eval=F}
 set.seed(123123)
 glmnGrid <- expand.grid(.alpha = seq(0,1,length =6),
@@ -170,9 +173,15 @@ lda.pred.test = predict(lda.fit, newdata = test_df)
 roc.lda = roc(test_df$diagnosis, lda.pred.test$posterior[,2],
 levels = c("B", "M"))
 plot(roc.lda, legacy.axes = TRUE, print.auc = TRUE)
+
+# caret
+set.seed(123123)
+model.lda <-train(x=train_df[,2:31],
+                  y=train_df$diagnosis,
+                  method ="lda",
+                  metric ="ROC",
+                  trControl =ctrl)
 ```
-
-
 
 ## Non-linear methods
 
@@ -181,10 +190,7 @@ plot(roc.lda, legacy.axes = TRUE, print.auc = TRUE)
 set.seed(123123)
 qda.fit <- qda(diagnosis~.,
                data = train_df)
-ctrl <- trainControl(method = "repeatedcv",
-                     repeats = 5,
-                     summaryFunction = twoClassSummary,
-                     classProbs = TRUE) 
+
 model.qda <- train(x = train_df[,-1],
                    y = train_df$diagnosis,
                    method = "qda",
@@ -197,6 +203,18 @@ saveRDS(model.qda, "qda_fit.RDS")
 model.qda = readRDS("qda_fit.RDS")
 model.qda$results$ROC
 ```
+
+### KNN
+```{r}
+set.seed(123123)
+model.knn <- train(x = train_df[,-1],
+                   y = train_df$diagnosis,
+                   method = "knn",
+                   preProcess = c("center", "scale"), 
+                   tuneGrid = data.frame(k = seq(1,50,by=1)),  
+                   trControl = ctrl)
+```
+
 
 ### Bayes
 ```{r,warning=F, eval=F}
@@ -454,7 +472,23 @@ class_gbmA = if_else(gbmA.pred > 0.5, 'CH', 'MM')
 
 # Model comparison
 ```{r}
+resamp <- resamples(list(gbmB = gbmB.fit,
+                         gbmA = gbmA.fit))
 
+resamp <- resamples(list(rpart = rpart.fit, rf = rf.fit))
+
+
+
+resamp <- resamples(list(glm = model.glm,
+                         glmn = model.glmn,
+                         lda = model.lda,
+                         qda = model.qda,
+                         knn = model.knn,
+                         bayes = model.nb,
+                         svmr = svmr.fit,
+                         svml = svml.fit))
+
+bwplot(resamp)
 ```
 
 # Variable importance, Visualization, and interpretation (L7_2.rmd): PDP, ICE, etc.
