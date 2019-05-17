@@ -1,7 +1,7 @@
 ---
-title: "analysis plan"
+title: "Analysis"
 author: "Jack Yan"
-date: "5/10/2019"
+date: "5/17/2019"
 output: github_document
 ---
 
@@ -22,21 +22,19 @@ cluster <- makePSOCKcluster(8)
 registerDoParallel(cluster)
 ```
 
-```{r, warning=F, eval=F, include=F}
+# Create a test dataset
+```{r, eval=FALSE}
+set.seed(123123)
 dat = 
   read_csv("./data.csv") %>% 
   select(-id, -X33) 
   dim(dat)
-```
-
-# Create a test dataset
-```{r, eval=FALSE}
-set.seed(123123)
 test_dat = sample_n(dat, 569/5)
 train_dat = anti_join(dat, test_dat)
 write_csv(train_dat, "train.csv")
 write_csv(test_dat, "test.csv")
 ```
+
 
 # Load train and test data
 ```{r}
@@ -48,6 +46,7 @@ test_df =
   read_csv("./test.csv")  %>% janitor::clean_names() %>% 
   mutate(diagnosis = as_factor(diagnosis))
 ```
+
 
 # Exploratory data analysis
 
@@ -85,9 +84,10 @@ featurePlot(x = train_df[,2:31],
             auto.key = list(columns = 2))
 ```
 
-# Model building, assessing performance, and variable importance
 
+# Model building, assessing performance, and variable importance
 ```{r, echo=F}
+# model formula
 # only include mean
 formula1 <- 
   diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + 
@@ -111,6 +111,7 @@ formula3 <-
   symmetry_se + fractal_dimension_se
 ```
 
+
 ## Linear methods
 ### Logistic Regression
 ```{r, warning=FALSE}
@@ -131,19 +132,19 @@ roc.glm.test = roc(test_df$diagnosis, glm.pred.prob.test)
 plot(roc.glm.test, legacy.axes = TRUE, print.auc = TRUE)
 ```
 
+
 ### Regularized Logistic Regression
 ```{r}
 ctrl <- trainControl(method = "repeatedcv",
                     repeats = 5,
                     summaryFunction = twoClassSummary,
                     classProbs = TRUE)
-
-glmnGrid <- expand.grid(.alpha = seq(0,1,length =6),
-                       .lambda = exp(seq(-6,-2,length =20)))
 ```
 
 ```{r, eval=F}
 set.seed(123123)
+glmnGrid <- expand.grid(.alpha = seq(0,1,length =6),
+                       .lambda = exp(seq(-6,-2,length =20)))
 model.glmn <- train(x=train_df[,2:31],
                    y=train_df$diagnosis,
                    method ="glmnet",
@@ -160,7 +161,7 @@ max(model.glmn$result$ROC)
 model.glmn$bestTune
 ```
 
-### LDA
+### LDA **Need to use caret**
 ```{r}
 lda.fit <- lda(diagnosis~., data = train_df)
 plot(lda.fit)
@@ -170,6 +171,7 @@ roc.lda = roc(test_df$diagnosis, lda.pred.test$posterior[,2],
 levels = c("B", "M"))
 plot(roc.lda, legacy.axes = TRUE, print.auc = TRUE)
 ```
+
 
 
 ## Non-linear methods
@@ -191,35 +193,10 @@ model.qda <- train(x = train_df[,-1],
 saveRDS(model.qda, "qda_fit.RDS")
 ```
 
-```{r }
-model.qda = readRDS("qda_fit.RDS")
-# qda.pred <- predict(model.qda, newdata = test_df)
-# head(qda.pred$posterior)
-
-# roc.qda <- roc(test_df$diagnosis, qda.pred$posterior[,2], 
-#                levels = c("B","M"))
-
-plot(roc.qda, legacy.axes = TRUE, print.auc = TRUE,main="QDA ROC Plot")
-```
-**AUC Value for QDA is 0.990 as shown above.**
-
-### KNN
 ```{r}
-set.seed(123123)
-model.knn <- train(x = train_df[,-1],
-                   y = train_df$diagnosis,
-                   method = "knn",
-                   preProcess = c("center", "scale"), 
-                   tuneGrid = data.frame(k = seq(1,50,by=1)),  
-                   trControl = ctrl)
-model.knn$bestTune
-ggplot(model.knn)
-pred_knn = predict.train(model.knn, newdata = test_df, type = 'prob')
-roc_knn <- roc(test_df$diagnosis, pred_knn[,2],
-               levels = c("B", "M"))
-plot.roc(roc_knn, legacy.axes = TRUE, print.auc = TRUE,main="KNN ROC Plot")
+model.qda = readRDS("qda_fit.RDS")
+model.qda$results$ROC
 ```
-**AUC Value for KNN is 0.989 as shown above.**
 
 ### Bayes
 ```{r,warning=F, eval=F}
@@ -241,33 +218,8 @@ model.nb = readRDS("nb_fit.rds")
 plot(model.nb)
 ```
 
-##### Compare QDA, NB and KNN   
-```{r}
-res <- resamples(list(QDA=model.qda,NB = model.nb, KNN = model.knn))
-summary(res)
-```
-
-Now let's look at the test set performance.
-```{r, warning=FALSE}
-library(stats)
-pred_knn = predict.train(model.knn, newdata = test_df, type = 'prob')[,2]
-pred_qda = predict.train(model.qda, newdata = test_df, type = 'prob')[,2]
-pred_nb = predict.train(model.nb, newdata = test_df, type = 'prob')[,2]
-
-roc.nb <- roc(test_df$diagnosis, pred_nb)
-roc.qda <- roc(test_df$diagnosis, pred_qda)
-roc.knn <- roc(test_df$diagnosis, pred_knn)
-
-auc <- c(roc.qda$auc[1], roc.nb$auc[1], roc.knn$auc[1])
 
 
-plot(roc.qda, col = 1,legacy.axes=TRUE)
-plot(roc.nb, col = 2,add=TRUE)
-plot(roc.knn, col = 3,add=TRUE)
-modelNames <- c("qda","nb","knn")
-legend("bottomright", legend = paste0(modelNames, ": ", round(auc,3)),
-       col = 1:6, lwd = 2)
-```
 
 ## Support Vector Machine
 ### Linear Kernel
@@ -321,6 +273,7 @@ svmr.fit <- train(diagnosis~.,
 saveRDS(svmr.fit, "svmr_fit.rds")
 ```
 
+
 ##### Radial Kernel Training Error Rate
 
 ```{r}
@@ -359,7 +312,6 @@ confusionMatrix(data = pred.svmr.test,
 **In conclusion, the radial kernel seems to give a better result on the data.**
 
 
-
 ## Classification Trees and Ensemble methods
 ### Classification Tree
 ```{r, eval=F}
@@ -376,6 +328,7 @@ rpart.fit <- train(formula3, train_df,
                    metric = "ROC")
 saveRDS(rpart.fit, 'rpart_fit.rds')
 ```
+
 
 ```{r }
 rpart.fit = readRDS('rpart_fit.rds')
@@ -400,13 +353,15 @@ test_df$pred = if_else(test_df$probM > 0.5, 'M', 'B')
 max(rpart.fit$result[,"ROC"])
 ```
 
+
+
 ### Random forests
 ```{r, eval = F}
 rf.grid <- expand.grid(mtry = seq(1,10, by=1),
                        splitrule = "gini",
                        min.node.size = seq(1,31, by=2))
 set.seed(123123)
-rf.fit <- train(formula1, train_df,
+rf.fit <- train(formula3, train_df,
                 method = "ranger",
                 tuneGrid = rf.grid,
                 metric = "ROC",
@@ -429,127 +384,14 @@ pred_rf = if_else(test_df$probM3 > 0.5, 'M', 'B')
 1 - mean(pred_rf == test_df$diagnosis)
 ```
 
-The test classification error rate for random forest is `r 1 - mean(pred_rf == test_df$Purchase)`.
-
-```{r, eval = F}
-rf.grid <- expand.grid(mtry = seq(1,10, by=1),
-                       splitrule = "gini",
-                       min.node.size = seq(1,31, by=2))
-set.seed(123123)
-rf.fit2 <- train(formula2, train_df,
-                method = "ranger",
-                tuneGrid = rf.grid,
-                metric = "ROC",
-                trControl = ctrl)
-max(rf.fit2$result$ROC)
-```
-
-```{r, eval = F}
-rf.grid <- expand.grid(mtry = seq(1,10, by=1),
-                       splitrule = "gini",
-                       min.node.size = seq(1,31, by=2))
-set.seed(123123)
-rf.fit3 <- train(formula3, train_df,
-                method = "ranger",
-                tuneGrid = rf.grid,
-                metric = "ROC",
-                trControl = ctrl)
-max(rf.fit3$result$ROC)
-```
 
 ### boosting (Adaboosting and binomial loss function)
 
 #### Binomial loss
-```{r, eval=F}
-gbmB.grid <- expand.grid(n.trees = c(1000,2000,3000,4000),
-                        interaction.depth = 1:8,
-                        shrinkage = c(0.003,0.004,0.005,0.006,0.007),
-                        n.minobsinnode = 1)
-set.seed(1)
-# Binomial loss function
-gbmB.fit <- train(formula1, train_df, 
-                 tuneGrid = gbmB.grid,
-                 trControl = ctrl,
-                 method = "gbm",
-                 distribution = "bernoulli",
-                 metric = "ROC",
-                 verbose = FALSE)
-
-gbmB.fit$bestTune
-max(gbmB.fit$results[,"ROC"])
-# gbmB.fit$results %>% as_tibble %>% filter(ROC == max(ROC))
-
-gbmB.fit2 <- train(formula2, train_df, 
-                 tuneGrid = gbmB.grid,
-                 trControl = ctrl,
-                 method = "gbm",
-                 distribution = "bernoulli",
-                 metric = "ROC",
-                 verbose = FALSE)
-gbmB.fit2$bestTune
-max(gbmB.fit2$results[,"ROC"])
-
-gbmB.fit3 <- train(formula3, train_df, 
-                 tuneGrid = gbmB.grid,
-                 trControl = ctrl,
-                 method = "gbm",
-                 distribution = "bernoulli",
-                 metric = "ROC",
-                 verbose = FALSE)
-gbmB.fit3$bestTune
-max(gbmB.fit3$results[,"ROC"])
-```
-
-```{r, echo=F,include=F}
-# saveRDS(gbmB.fit, 'gbmB_fit.rds')
-gbmB.fit = readRDS('gbmB_fit.rds')
-```
-
-```{r}
-ggplot(gbmB.fit, highlight = TRUE)
-gbmB.pred <- predict(gbmB.fit, newdata = test_df, type = "prob")[,1]
-class_gbmB = if_else(test_df$probM3 > 0.5, 'M', 'B')
-# Classification error rate
-1 - mean(class_gbmB == test_df$diagnosis)
-```
 
 
-#### AdaBoost
-```{r, eval=F}
-gbmA.grid <- expand.grid(n.trees = c(6000,8000,10000,12000,14000),
-                        interaction.depth = seq(1, 10, by=2),
-                        shrinkage = seq(0.004, 0.010, by=0.002),
-                        n.minobsinnode = 1)
-set.seed(123123)
-# Adaboost loss function
-gbmA.fit <- train(formula3, train_df,
-                 tuneGrid = gbmA.grid,
-                 trControl = ctrl,
-                 method = "gbm",
-                 distribution = "adaboost",
-                 metric = "ROC",
-                 verbose = FALSE)
-```
 
-```{r, echo=F}
-# saveRDS(gbmA.fit, 'gbmA_fit.rds')
-gbmA.fit = readRDS('hw4_gbmA_fit.rds')
-```
 
-```{r}
-gbmA.fit$bestTune
-max(gbmA.fit$results[,"ROC"])
-ggplot(gbmA.fit, highlight = TRUE)
-gbmA.pred <- predict(gbmA.fit, newdata = test_df, type = "prob")[,1]
-class_gbmA = if_else(gbmA.pred > 0.5, 'CH', 'MM')
-# Classification error rate
-1 - mean(class_gbmA == test_df$Purchase)
-```
 
-# Variable importance, Visualization, and interpretation (L7_2.rmd): PDP, ICE, etc.
-
-# Model comparison
-
-# Final model interpretation
 
 

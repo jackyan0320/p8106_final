@@ -196,8 +196,8 @@ model.qda = readRDS("qda_fit.RDS")
 # qda.pred <- predict(model.qda, newdata = test_df)
 # head(qda.pred$posterior)
 
-# roc.qda <- roc(test_df$diagnosis, qda.pred$posterior[,2], 
-#                levels = c("B","M"))
+roc.qda <- roc(test_df$diagnosis, qda.pred$posterior[,2], 
+               levels = c("B","M"))
 
 plot(roc.qda, legacy.axes = TRUE, print.auc = TRUE,main="QDA ROC Plot")
 ```
