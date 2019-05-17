@@ -16,6 +16,7 @@ library(e1071)
 library(mlbench)
 library(pROC)
 library(AppliedPredictiveModeling)
+library(stats)
 ```
 
 ```{r}
@@ -51,6 +52,17 @@ glm.pred.prob.test = predict(glm.fit, type = "response", newdata = test_df)
 roc.glm.test = roc(test_df$diagnosis, glm.pred.prob.test)
 plot(roc.glm.test, legacy.axes = TRUE, print.auc = TRUE)
 
+ctrl <-trainControl(method ="repeatedcv",
+                    repeats =5,
+                    summaryFunction =twoClassSummary,
+                    classProbs =TRUE)
+set.seed(1)
+model.glm <-train(x=train_df[,2:31],
+                  y=train_df$diagnosis,
+                  method ="glm",
+                  metric ="ROC",
+                  trControl =ctrl)
+model.glm$results$ROC
 ```
 
 ### Regularized Logistic Regression
@@ -70,6 +82,8 @@ model.glmn <-train(x=train_df[,2:31],
                    metric ="ROC",
                    trControl =ctrl)
 plot(model.glmn,xTrans =function(x)log(x))
+model.glmn$results$ROC %>% max
+
 ```
 
 ### LDA
@@ -93,5 +107,44 @@ model.lda <-train(x=train_df[,2:31],
                   method ="lda",
                   metric ="ROC",
                   trControl =ctrl)
+
+model.lda$result$ROC
+```
+
+```{r}
+pred_glm = predict.train(model.glm, newdata = test_df, type = 'prob')[,2]
+pred_lda = predict.train(model.lda, newdata = test_df, type = 'prob')[,2]
+pred_knn = predict.train(model.knn, newdata = test_df, type = 'prob')[,2]
+pred_qda = predict.train(model.qda, newdata = test_df, type = 'prob')[,2]
+pred_nb = predict.train(model.nb, newdata = test_df, type = 'prob')[,2]
+
+roc.glm <- roc(test_df$diagnosis, pred_glm)
+roc.lda <- roc(test_df$diagnosis, pred_lda)
+roc.nb <- roc(test_df$diagnosis, pred_nb)
+roc.qda <- roc(test_df$diagnosis, pred_qda)
+roc.knn <- roc(test_df$diagnosis, pred_knn)
+
+auc <- c(roc.glm$auc[1], roc.lda$auc[1], roc.qda$auc[1], roc.nb$auc[1], roc.knn$auc[1])
+
+plot(roc.glm, col=1, legacy.axes=TRUE)
+plot(roc.lda, col=2, add=TRUE)
+plot(roc.qda, col = 3, add=TRUE)
+plot(roc.nb, col = 4, add=TRUE)
+plot(roc.knn, col = 5, add=TRUE)
+modelNames <- c("glm","lda","qda","nb","knn")
+legend("bottomright", legend = paste0(modelNames, ": ", round(auc,3)),
+       col = 1:6, lwd = 2)
+```
+
+```{r}
+resamp <- resamples(list(glm.fit = model.glm,
+                         glmn.fit = model.glmn,
+                         lda.fit = model.lda,
+                         qda.fit = model.qda,
+                         knn.fit = model.knn,
+                         bayes.fit = model.nb
+                         ))
+bwplot(resamp)
+summary(resamp)
 ```
 
