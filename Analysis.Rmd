@@ -205,7 +205,7 @@ model.qda$results$ROC
 ```
 
 ### KNN
-```{r}
+```{r eval = F}
 set.seed(123123)
 model.knn <- train(x = train_df[,-1],
                    y = train_df$diagnosis,
@@ -213,8 +213,13 @@ model.knn <- train(x = train_df[,-1],
                    preProcess = c("center", "scale"), 
                    tuneGrid = data.frame(k = seq(1,50,by=1)),  
                    trControl = ctrl)
+
+saveRDS(model.knn, "knn_fit.RDS")
 ```
 
+```{r}
+model.knn = readRDS("knn_fit.RDS")
+```
 
 ### Bayes
 ```{r,warning=F, eval=F}
@@ -333,9 +338,6 @@ confusionMatrix(data = pred.svmr.test,
 ## Classification Trees and Ensemble methods
 ### Classification Tree
 ```{r, eval=F}
-ctrl <- trainControl(method = "repeatedcv",
-                     summaryFunction = twoClassSummary,
-                     classProbs = TRUE)
 # variable.names(train_df)
 
 set.seed(123123)
@@ -384,14 +386,12 @@ rf.fit <- train(formula3, train_df,
                 tuneGrid = rf.grid,
                 metric = "ROC",
                 trControl = ctrl)
+saveRDS(rf.fit, 'rf_fit.rds')
 ```
 
-```{r, echo=F}
-# saveRDS(rf.fit, 'rf_fit.rds')
+
+```{r}
 rf.fit = readRDS('rf_fit.rds')
-```
-
-```{r }
 rf.fit$bestTune
 max(rf.fit$results[,"ROC"])
 ggplot(rf.fit, highlight = TRUE)
@@ -472,13 +472,6 @@ class_gbmA = if_else(gbmA.pred > 0.5, 'CH', 'MM')
 
 # Model comparison
 ```{r}
-resamp <- resamples(list(gbmB = gbmB.fit,
-                         gbmA = gbmA.fit))
-
-resamp <- resamples(list(rpart = rpart.fit, rf = rf.fit))
-
-
-
 resamp <- resamples(list(glm = model.glm,
                          glmn = model.glmn,
                          lda = model.lda,
@@ -486,9 +479,14 @@ resamp <- resamples(list(glm = model.glm,
                          knn = model.knn,
                          bayes = model.nb,
                          svmr = svmr.fit,
-                         svml = svml.fit))
+                         svml = svml.fit,
+                         rpart = rpart.fit, 
+                         rf = rf.fit,
+                         gbmB = gbmB.fit,
+                         gbmA = gbmA.fit))
 
 bwplot(resamp)
+summary(resamp)
 ```
 
 # Variable importance, Visualization, and interpretation (L7_2.rmd): PDP, ICE, etc.
