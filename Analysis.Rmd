@@ -386,8 +386,81 @@ pred_rf = if_else(test_df$probM3 > 0.5, 'M', 'B')
 
 
 ### boosting (Adaboosting and binomial loss function)
-
 #### Binomial loss
+```{r, eval=F}
+gbmB.grid <- expand.grid(n.trees = c(1000,2000,3000,4000),
+                        interaction.depth = 1:8,
+                        shrinkage = c(0.004,0.006,0.008,0.010),
+                        n.minobsinnode = 1)
+set.seed(123123)
+# Binomial loss function
+gbmB.fit <- train(formula3, train_df, 
+                 tuneGrid = gbmB.grid,
+                 trControl = ctrl,
+                 method = "gbm",
+                 distribution = "bernoulli",
+                 metric = "ROC",
+                 verbose = FALSE)
+
+gbmB.fit$bestTune
+max(gbmB.fit$results[,"ROC"])
+```
+
+```{r, echo=F,include=F}
+# saveRDS(gbmB.fit, 'gbmB_fit.rds')
+gbmB.fit = readRDS('gbmB_fit.rds')
+```
+
+```{r}
+ggplot(gbmB.fit, highlight = TRUE)
+gbmB.pred <- predict(gbmB.fit, newdata = test_df, type = "prob")[,1]
+class_gbmB = if_else(test_df$probM3 > 0.5, 'M', 'B')
+# Classification error rate
+1 - mean(class_gbmB == test_df$diagnosis)
+```
+
+
+#### AdaBoost
+```{r, eval=F}
+gbmA.grid <- expand.grid(n.trees = c(6000,8000,10000,12000,14000),
+                        interaction.depth = seq(1, 10, by=2),
+                        shrinkage = seq(0.004, 0.010, by=0.002),
+                        n.minobsinnode = 1)
+set.seed(123123)
+# Adaboost loss function
+gbmA.fit <- train(formula3, train_df,
+                 tuneGrid = gbmA.grid,
+                 trControl = ctrl,
+                 method = "gbm",
+                 distribution = "adaboost",
+                 metric = "ROC",
+                 verbose = FALSE)
+```
+
+```{r, echo=F}
+# saveRDS(gbmA.fit, 'gbmA_fit.rds')
+gbmA.fit = readRDS('gbmA_fit.rds')
+```
+
+```{r}
+gbmA.fit$bestTune
+max(gbmA.fit$results[,"ROC"])
+ggplot(gbmA.fit, highlight = TRUE)
+gbmA.pred <- predict(gbmA.fit, newdata = test_df, type = "prob")[,1]
+class_gbmA = if_else(gbmA.pred > 0.5, 'CH', 'MM')
+# Classification error rate
+1 - mean(class_gbmA == test_df$Purchase)
+```
+
+# Model comparison
+```{r}
+
+```
+
+# Variable importance, Visualization, and interpretation (L7_2.rmd): PDP, ICE, etc.
+
+
+# Final model interpretation
 
 
 

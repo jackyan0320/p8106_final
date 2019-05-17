@@ -533,7 +533,7 @@ gbmA.fit <- train(formula3, train_df,
 
 ```{r, echo=F}
 # saveRDS(gbmA.fit, 'gbmA_fit.rds')
-gbmA.fit = readRDS('hw4_gbmA_fit.rds')
+gbmA.fit = readRDS('gbmA_fit.rds')
 ```
 
 ```{r}
