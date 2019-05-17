@@ -17,13 +17,14 @@ library(mlbench)
 library(pROC)
 library(AppliedPredictiveModeling)
 ```
+
 ```{r}
 test_df<-read.csv("test.csv")
 train_df<-read.csv("train.csv")
 ```
 
 ### Produce some graphical summaries
-```{r}
+```{r, cache=T}
 featurePlot(x = train_df[, 2:31],
             y = train_df$diagnosis,
             scales = list(x=list(relation="free"),
