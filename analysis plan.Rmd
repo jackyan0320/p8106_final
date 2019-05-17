@@ -10,8 +10,13 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse) # data manipulation
 library(corrplot) # correlation plot
 library(caret) # model training
+library(rpart) # CART
+library(rpart.plot)
 
-# library(AppliedPredictiveModeling)
+# parallel processing with caret
+library(doParallel)
+cluster <- makePSOCKcluster(8)
+registerDoParallel(cluster)
 ```
 
 ```{r, warning=F}
@@ -33,10 +38,10 @@ write_csv(test_dat, "test.csv")
 # Load train and test data
 ```{r}
 train_df = 
-  read_csv("./train.csv") %>% 
+  read_csv("./train.csv") %>% janitor::clean_names() %>% 
   mutate(diagnosis = as_factor(diagnosis))
 test_df = 
-  read_csv("./test.csv")  %>% 
+  read_csv("./test.csv")  %>% janitor::clean_names() %>% 
   mutate(diagnosis = as_factor(diagnosis))
 ```
 
@@ -97,10 +102,258 @@ featurePlot(x = train_df[,2:11],
 ### KNN
 
 ## Classification Trees and Ensemble methods
-### a single tree
-### bagging
-### random forests
+### Classification Tree
+```{r, eval=F}
+ctrl <- trainControl(method = "repeatedcv",
+                     summaryFunction = twoClassSummary,
+                     classProbs = TRUE)
+formula1 <- 
+  diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + 
+  smoothness_mean + compactness_mean + concavity_mean + concave_points_mean +
+  symmetry_mean + fractal_dimension_mean
+formula2 <- 
+  diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + 
+  smoothness_mean + compactness_mean + concavity_mean + concave_points_mean +
+  symmetry_mean + fractal_dimension_mean + radius_worst + texture_worst +
+  perimeter_worst + area_worst + smoothness_worst + compactness_worst + concavity_worst +
+  concave_points_worst + symmetry_worst + fractal_dimension_worst
+formula3 <- 
+  diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + 
+  smoothness_mean + compactness_mean + concavity_mean + concave_points_mean +
+  symmetry_mean + fractal_dimension_mean + radius_worst + texture_worst +
+  perimeter_worst + area_worst + smoothness_worst + compactness_worst + concavity_worst +
+  concave_points_worst + symmetry_worst + fractal_dimension_worst + radius_se + texture_se +
+  perimeter_se + area_se + smoothness_se + compactness_se + concavity_se + concave_points_se +
+  symmetry_se + fractal_dimension_se
+variable.names(train_df)
+
+set.seed(1)
+rpart.fit1 <- train(formula1, train_df, 
+                   method = "rpart",
+                   tuneGrid = data.frame(cp = exp(seq(-20,-2, len = 50))),
+                   trControl = ctrl,
+                   metric = "ROC")
+rpart.fit2 <- train(formula2, train_df, 
+                   method = "rpart",
+                   tuneGrid = data.frame(cp = exp(seq(-20,-2, len = 50))),
+                   trControl = ctrl,
+                   metric = "ROC")
+rpart.fit3 <- train(formula2, train_df, 
+                   method = "rpart",
+                   tuneGrid = data.frame(cp = exp(seq(-20,-2, len = 50))),
+                   trControl = ctrl,
+                   metric = "ROC")
+```
+
+```{r, echo=F,include=F}
+# saveRDS(rpart.fit, 'hw4_rpart_fit.rds')
+rpart.fit = readRDS('hw4_rpart_fit.rds')
+```
+
+```{r }
+rpart.fit$bestTune
+max(rpart.fit$result$ROC)
+# Model tuning
+ggplot(rpart.fit1, highlight = TRUE)
+# Plot of the final model
+rpart.plot(rpart.fit1$finalModel)
+tree_pruned = prune(tree_rpart, cp = one_se)
+rpart.plot(tree_pruned)
+```
+
+```{r }
+rpart.fit2$bestTune
+# Model tuning
+ggplot(rpart.fit2, highlight = TRUE)
+# Plot of the final model
+rpart.plot(rpart.fit2$finalModel)
+```
+
+```{r }
+rpart.fit3$bestTune
+# Model tuning
+ggplot(rpart.fit3, highlight = TRUE)
+# Plot of the final model
+rpart.plot(rpart.fit3$finalModel)
+```
+
+The plot of the final model is shown above.
+ Model 1
+```{r}
+test_df$probM = predict(rpart.fit$finalModel, newdata = test_df, type = "prob")[,1]
+test_df$pred = if_else(test_df$probM > 0.5, 'M', 'B')
+
+# Classification error rate
+1 - mean(test_df$pred == test_df$diagnosis)
+max(rpart.fit$result[,"ROC"])
+```
+ Model 2
+```{r}
+test_df$probM2 = predict(rpart.fit2$finalModel, newdata = test_df, type = "prob")[,1]
+test_df$pred2 = if_else(test_df$probM2 > 0.5, 'M', 'B')
+
+# Classification error rate
+1 - mean(test_df$pred2 == test_df$diagnosis)
+max(rpart.fit2$result[,"ROC"])
+```
+ Model 3
+```{r}
+test_df$probM3 = predict(rpart.fit3$finalModel, newdata = test_df, type = "prob")[,1]
+test_df$pred3 = if_else(test_df$probM3 > 0.5, 'M', 'B')
+
+# Classification error rate
+1 - mean(test_df$pred2 == test_df$diagnosis)
+max(rpart.fit3$result[,"ROC"])
+```
+
+Test classification error rate of classification tree is `r 1 - mean(test_df$pred == test_df$Purchase)`.
+
+
+### Random forests
+```{r, eval = F}
+rf.grid <- expand.grid(mtry = seq(1,10, by=1),
+                       splitrule = "gini",
+                       min.node.size = seq(1,31, by=2))
+set.seed(123123)
+rf.fit <- train(formula1, train_df,
+                method = "ranger",
+                tuneGrid = rf.grid,
+                metric = "ROC",
+                trControl = ctrl)
+```
+
+```{r, echo=F}
+# saveRDS(rf.fit, 'rf_fit.rds')
+rf.fit = readRDS('rf_fit.rds')
+```
+
+```{r }
+rf.fit$bestTune
+max(rf.fit$results[,"ROC"])
+ggplot(rf.fit, highlight = TRUE)
+
+rf.pred <- predict(rf.fit, newdata = test_df, type = "prob")[,1]
+pred_rf = if_else(test_df$probM3 > 0.5, 'M', 'B')
+# Classification error rate
+1 - mean(pred_rf == test_df$diagnosis)
+```
+
+The test classification error rate for random forest is `r 1 - mean(pred_rf == test_df$Purchase)`.
+
+```{r, eval = F}
+rf.grid <- expand.grid(mtry = seq(1,10, by=1),
+                       splitrule = "gini",
+                       min.node.size = seq(1,31, by=2))
+set.seed(123123)
+rf.fit2 <- train(formula2, train_df,
+                method = "ranger",
+                tuneGrid = rf.grid,
+                metric = "ROC",
+                trControl = ctrl)
+max(rf.fit2$result$ROC)
+```
+
+```{r, eval = F}
+rf.grid <- expand.grid(mtry = seq(1,10, by=1),
+                       splitrule = "gini",
+                       min.node.size = seq(1,31, by=2))
+set.seed(123123)
+rf.fit3 <- train(formula3, train_df,
+                method = "ranger",
+                tuneGrid = rf.grid,
+                metric = "ROC",
+                trControl = ctrl)
+max(rf.fit3$result$ROC)
+```
+
 ### boosting (Adaboosting and binomial loss function)
+
+#### Binomial loss
+```{r, eval=F}
+gbmB.grid <- expand.grid(n.trees = c(1000,2000,3000,4000),
+                        interaction.depth = 1:8,
+                        shrinkage = c(0.003,0.004,0.005,0.006,0.007),
+                        n.minobsinnode = 1)
+set.seed(1)
+# Binomial loss function
+gbmB.fit <- train(formula1, train_df, 
+                 tuneGrid = gbmB.grid,
+                 trControl = ctrl,
+                 method = "gbm",
+                 distribution = "bernoulli",
+                 metric = "ROC",
+                 verbose = FALSE)
+
+gbmB.fit$bestTune
+max(gbmB.fit$results[,"ROC"])
+# gbmB.fit$results %>% as_tibble %>% filter(ROC == max(ROC))
+
+gbmB.fit2 <- train(formula2, train_df, 
+                 tuneGrid = gbmB.grid,
+                 trControl = ctrl,
+                 method = "gbm",
+                 distribution = "bernoulli",
+                 metric = "ROC",
+                 verbose = FALSE)
+gbmB.fit2$bestTune
+max(gbmB.fit2$results[,"ROC"])
+
+gbmB.fit3 <- train(formula3, train_df, 
+                 tuneGrid = gbmB.grid,
+                 trControl = ctrl,
+                 method = "gbm",
+                 distribution = "bernoulli",
+                 metric = "ROC",
+                 verbose = FALSE)
+gbmB.fit3$bestTune
+max(gbmB.fit3$results[,"ROC"])
+```
+
+```{r, echo=F,include=F}
+# saveRDS(gbmB.fit, 'gbmB_fit.rds')
+gbmB.fit = readRDS('gbmB_fit.rds')
+```
+
+```{r}
+ggplot(gbmB.fit, highlight = TRUE)
+gbmB.pred <- predict(gbmB.fit, newdata = test_df, type = "prob")[,1]
+class_gbmB = if_else(test_df$probM3 > 0.5, 'M', 'B')
+# Classification error rate
+1 - mean(class_gbmB == test_df$diagnosis)
+```
+
+
+#### AdaBoost
+```{r, eval=F}
+gbmA.grid <- expand.grid(n.trees = c(6000,8000,10000,12000,14000),
+                        interaction.depth = seq(1, 10, by=2),
+                        shrinkage = seq(0.004, 0.010, by=0.002),
+                        n.minobsinnode = 1)
+set.seed(123123)
+# Adaboost loss function
+gbmA.fit <- train(formula3, train_df,
+                 tuneGrid = gbmA.grid,
+                 trControl = ctrl,
+                 method = "gbm",
+                 distribution = "adaboost",
+                 metric = "ROC",
+                 verbose = FALSE)
+```
+
+```{r, echo=F}
+# saveRDS(gbmA.fit, 'gbmA_fit.rds')
+gbmA.fit = readRDS('hw4_gbmA_fit.rds')
+```
+
+```{r}
+gbmA.fit$bestTune
+max(gbmA.fit$results[,"ROC"])
+ggplot(gbmA.fit, highlight = TRUE)
+gbmA.pred <- predict(gbmA.fit, newdata = test_df, type = "prob")[,1]
+class_gbmA = if_else(gbmA.pred > 0.5, 'CH', 'MM')
+# Classification error rate
+1 - mean(class_gbmA == test_df$Purchase)
+```
 
 # Variable importance, Visualization, and interpretation (L7_2.rmd): PDP, ICE, etc.
 
