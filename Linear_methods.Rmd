@@ -79,7 +79,19 @@ plot(lda.fit)
 
 lda.pred.test = predict(lda.fit, newdata = test_df)
 roc.lda = roc(test_df$diagnosis, lda.pred.test$posterior[,2],
-levels = c("B", "M"))
+              levels = c("B", "M"))
 plot(roc.lda, legacy.axes = TRUE, print.auc = TRUE)
+
+## caret
+ctrl <-trainControl(method ="repeatedcv",
+                    repeats =5,
+                    summaryFunction =twoClassSummary,
+                    classProbs =TRUE)
+set.seed(1)
+model.lda <-train(x=train_df[,2:31],
+                  y=train_df$diagnosis,
+                  method ="lda",
+                  metric ="ROC",
+                  trControl =ctrl)
 ```
 
