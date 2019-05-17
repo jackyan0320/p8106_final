@@ -1,0 +1,84 @@
+---
+title: "Linear_methods"
+author: "Zixu Wang"
+date: "May 16, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) 
+library(corrplot) 
+library(caret) 
+library(glmnet)
+library(MASS)
+library(e1071)
+library(mlbench)
+library(pROC)
+library(AppliedPredictiveModeling)
+```
+```{r}
+test_df<-read.csv("test.csv")
+train_df<-read.csv("train.csv")
+```
+
+### Produce some graphical summaries
+```{r}
+featurePlot(x = train_df[, 2:31],
+            y = train_df$diagnosis,
+            scales = list(x=list(relation="free"),
+            y=list(relation="free")),
+            plot = "density", pch = "|",
+            auto.key = list(columns = 2))
+```
+
+### Logistic Regression
+```{r}
+glm.fit <- glm(diagnosis~., data=train_df, family="binomial")
+summary(glm.fit)
+
+contrasts(train_df$diagnosis)
+
+glm.pred.prob = predict(glm.fit, type = "response")
+glm.pred = rep("B", length(glm.pred.prob))
+glm.pred[glm.pred.prob > 0.5] = "M"
+confusionMatrix(data = as.factor(glm.pred),
+                reference = train_df$diagnosis,
+                positive = "M")
+
+glm.pred.prob.test = predict(glm.fit, type = "response", newdata = test_df)
+roc.glm.test = roc(test_df$diagnosis, glm.pred.prob.test)
+plot(roc.glm.test, legacy.axes = TRUE, print.auc = TRUE)
+
+```
+
+### Regularized Logistic Regression
+```{r}
+ctrl <-trainControl(method ="repeatedcv",
+                    repeats =5,
+                    summaryFunction =twoClassSummary,
+                    classProbs =TRUE)
+
+glmnGrid <-expand.grid(.alpha =seq(0,1,length =6),
+                       .lambda =exp(seq(-6,-2,length =20)))
+set.seed(1)
+model.glmn <-train(x=train_df[,2:31],
+                   y=train_df$diagnosis,
+                   method ="glmnet",
+                   tuneGrid =glmnGrid,
+                   metric ="ROC",
+                   trControl =ctrl)
+plot(model.glmn,xTrans =function(x)log(x))
+```
+
+### LDA
+```{r}
+lda.fit <-lda(diagnosis~.,data = train_df)
+plot(lda.fit)
+
+lda.pred.test = predict(lda.fit, newdata = test_df)
+roc.lda = roc(test_df$diagnosis, lda.pred.test$posterior[,2],
+levels = c("B", "M"))
+plot(roc.lda, legacy.axes = TRUE, print.auc = TRUE)
+```
+
