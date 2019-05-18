@@ -1,0 +1,25 @@
+---
+title: "Report"
+author: "Zixu Wang(zw2541),"
+date: "5/18/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) # data manipulation
+library(corrplot) # correlation plot
+library(caret) # model training
+library(AppliedPredictiveModeling) # plot themes
+library(pROC) # contains roc function. generate ROC curves
+library(MASS) # contains function lda and qda
+library(rpart) # CART
+library(rpart.plot)
+library(plotmo)
+
+# parallel processing with caret
+library(doParallel)
+cluster <- makePSOCKcluster(8)
+registerDoParallel(cluster)
+```
+
