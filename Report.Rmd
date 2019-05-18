@@ -115,12 +115,13 @@ Model selection was based on repeated cross-validation. The mean AUC was summari
 ## Final model
 The final model is a mixture of ridge and lasso (alpha = 0.2, lambda = 0.014). Coefficients of the final regularized logistic regression (glmnet) are summarized in **Table 2**. Coefficients are arranged in descending order based on their absolute values. Among all the coefficients, SE of radius, worst value of radius, worst value of texture, worst value of concave points, and worst value of perimeter are the 5 predictors with largest absolute coefficients. Since all the predictors are centered and scaled before fitting the model, the coefficients are on the same scale as well. Therefore, their absolute values can reflect the importance of the predictors. 
 
-The train data ROC curve of the final model is shown in **Figure XXX**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be interpreted as the log odds ratio of for one-unit chage in the covariate 
+The train data ROC curve of the final model is shown in **Figure XXX**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be simply interpreted as the log odds ratio of Malignant tumor for one-unit chage in the corresponding covariate, keeping other covariates constant. 
 
 \newpage
 
 ## Conclusion
 prompt: What were your findings? Are they what you expect? What insights into the data can you make?
+
 
 ## APPENDIX
 
