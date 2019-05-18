@@ -1,8 +1,7 @@
 ---
-title: "Report"
-author: "Zixu Wang(zw2541),"
-date: "5/18/2019"
-output: html_document
+title: "Predicting Diagnosis of Breast Cancer Tumor"
+author: "Jianghui Lin jl5172, Zixu Wang zw2541, Jack Yan xy2395"
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -16,10 +15,247 @@ library(MASS) # contains function lda and qda
 library(rpart) # CART
 library(rpart.plot)
 library(plotmo)
-
+library(glmnet)
+library(e1071)
+library(mlbench)
+library(ISLR)
+library(factoextra)
+library(gridExtra)
+library(RColorBrewer)
+library(gplots)
 # parallel processing with caret
 library(doParallel)
 cluster <- makePSOCKcluster(8)
 registerDoParallel(cluster)
+```
+
+```{r, include=FALSE}
+set.seed(123123)
+dat = 
+  read_csv("./data.csv") %>% 
+  dplyr::select(-id, -X33)
+dim(dat)
+test_dat = sample_n(dat, 569/5)
+dim(test_dat)
+train_dat = anti_join(dat, test_dat)
+dim(train_dat)
+write_csv(train_dat, "train.csv")
+write_csv(test_dat, "test.csv")
+
+train_df = 
+  read_csv("./train.csv") %>% janitor::clean_names() %>% 
+  mutate(diagnosis = as_factor(diagnosis))
+
+test_df = 
+  read_csv("./test.csv")  %>% janitor::clean_names() %>% 
+  mutate(diagnosis = as_factor(diagnosis))
+```
+
+## Introduction
+
+This dataset includes different features which were computed from a digitized image of a fine needle aspirate (FNA) of a breast mass. The FNA describes the characteristics of the cell nuclei present in the image. Ten real-valued features are computed for each cell nucleus. The features include radius, texture, perimeter, area, compactness, concavity, concave points, symmetry, and fractal dimension. In this project, we aim to use the lab results to determine which features contribute to a better diagnosis result of breast mass (M = malignant, B = benign). In the dataset, we have 357 benign observations and 212 malignant observations, so the two classes are balanced.
+
+## Dataset Partitioning
+The original dataset contains 569 observations, among which 456 were randomly partitioned into the training set, and 113 into the test set. The training set was used to conduct model selection based on 10-fold cross-validation, and the test set was used to verify the model selection result. 
+
+## Exploratory Data Analysis
+
+#### 1. K Means Clustering (Unsupervised learning)
+
+In 2-means clustering **(Figure 1)**, we seek to partition the observations into a pre-specified number of clusters, in this case, we have specified the number of clusters as 2 using the `fviz_nbclust` function to determine the optimized the number of clusters. The number of optimized clusters exactly equals to the number of our response categories ‘B’ and ‘M’. 
+
+#### 2. Correlation plots
+
+Although there are some strong correlations among several covariates, we considered them as intuitive ones **(Figure 2)**. For example, the correlations among perimeters, radius, and area are all related to the size of the tumor. We decided to keep all covariates at this point for further analysis.
+
+#### 3. One-to-one relation between classes and covariates 
+
+According to the feature plot **(Figure 3)** which shows the one-to-one relation between classes and covariate. The ‘M’ (malignant tutor) class generally has larger radius mean, texture mean, perimeter mean, area mean, compactness mean, smoothness mean and concavity mean compare to those of ‘B’ (benign) tumors. We will circle back after the thorough analysis to check if the conclusions we obtain are identical.
+
+## Models
+
+All the 30 covariates were included in all the models. The 30 predictors are the means, standard errors and worst values of the 10 characteristics measured on the cell nuclei. Ordinary and regularized Logistic regression, Linear and quadratic discriminant analysis, Naive Bayes, KNN, classification trees, random forests, and ensemble methods were used to fit the data. The area under the ROC curve (AUC) were calculated from repeated cross-validation and used to compare models. For models that require tuning, repeated cross-validation was used to decide the best hyperparameter(s) that corresponds to the largest AUC.
+
+#### 1. Logistic regression and regularized logistic regression (glmnet)
+
+Both logistic regression and regularized logistic regression models (glmnet) were built to fit the 30 predictors on the response. Data were centered and scaled before fitting into the glmnet model. Cross-validation showed that the logistic regression has AUC 0.9544, sensitivity 0.9821 and specificity 0.8856. The best parameter of glmnet is alpha 0.2 and lambda 0.014, with AUC 0.9961, which is better than the logistic regression model.
+ 
+#### 2. LDA 
+
+The assumption of LDA is that all the variables follow a multivariate normal distribution. Therefore, each covariate has its own mean and shares a common variance-covariance matrix. All 30 predictors were included in this model. By fitting the model with the cross-validation method, this LDA model has AUC 0.9917, sensitivity 0.8958 and specificity 0.9930.
+
+#### 3. QDA
+
+QDA assumes that all the variables are following a Gaussian distribution. Therefore, different from LDA, each covariate has its specific mean and different variance-covariance matrix. All 30 predictors were included in this QDA model and the AUC is 0.9910, sensitivity is 0.9718, specificity is 0.9425.
+
+#### 4. Naive Bayes
+
+Naive Bayes assumes that the features are conditionally independent given the class instead of modeling their full conditional distribution given the class, and it is an approximation to the Bayes classifier. All 30 predictors were included in the model and the best AUC is 0.9873.
+
+#### 5. KNN
+
+All 30 predictors were included in this KNN model, and the best tuning parameter is 33. This model has AUC equals to 0.9925, sensitivity equals to 0.8784 and specificity equals to 0.9894.
+
+#### 6. Support Vector Machine (linear and radial kernel)
+
+
+
+#### 7. Classification Tree and random forests
+
+A classification tree was built on the 30 predictors. Cp was tuned using cross-validation. The best cp turned out to be 0.0062, corresponding to 5 terminal nodes and AUC = 0.9412. In the random forest model, both interaction depth (mtry) and minimal node size were tuned by cross-validation. The best model random forest model had interaction depth 1 and minimal node size 1, with AUC 0.9931, which is much better than that of a single tree.
+
+#### 8. Boosting (AdaBoosting and binomial loss function)
+
+Binomial loss boosting and AdaBoosting were tuned on 3 hyperparameters: number of trees, interaction depth, and shrinkage. Minimal node size was set to be 1. The best binomial loss boosting model and the best AdaBoosting model had AUC 0.9926 and 0.9930, respectively. Their AUC are comparable.
+
+## Model Selection
+
+Model selection was based on repeated cross-validation. The glmnet model had the largest AUC, so we decided to use it as our final model.
+
+
+\newpage
+
+
+## APPENDIX
+
+```{r echo=FALSE, eval=FALSE}
+dat1 <- read.csv("data.csv", row.names=NULL)
+class1 = paste(dat1[,2], 1:length(class), sep="-")
+dat1 <- dat1[,-2]
+dat1 <- dat1[,-32]
+dat1 <- dat1[,-1]
+rownames(dat1) <- class1
+dim(dat1)
+dat1 <- dat1[,1:10]
+dat1 <- scale(dat1)
+fviz_nbclust(dat1,FUNcluster = kmeans,method = "silhouette")
+set.seed(123123)
+km <- kmeans(dat1, centers = 2, nstart = 20)
+km_vis <- fviz_cluster(list(data = dat1, cluster = km$cluster),
+                      ellipse.type = "convex",
+                      geom = c("point","text"),
+                      labelsize = 5, palette = "Dark2")
+km_vis
+saveRDS(km_vis, "km_vis.rds")
+```
+
+```{r echo=FALSE}
+km_vis = readRDS("km_vis.rds")
+km_vis
+```
+
+\center __Figure 1__ 2-means clustering on the first two principle components \center
+
+```{r echo=FALSE}
+x <- model.matrix(diagnosis~., train_df)[,-1]
+y <- train_df$diagnosis
+theme1 <- trellis.par.get()
+theme1$plot.symbol$col <- rgb(.2, .4, .2, .5) 
+theme1$plot.symbol$pch <- 16
+theme1$plot.line$col <- rgb(.8, .1, .1, 1) 
+theme1$plot.line$lwd <- 2
+theme1$strip.background$col <- rgb(.0, .2, .6, .2) 
+trellis.par.set(theme1)
+
+par(cex = 0.7)
+corrplot(cor(x), tl.srt = 45, order = 'hclust', type = 'upper')
+```
+
+\center __Figure 2__ Correlation plots \center
+
+```{r echo=FALSE}
+transparentTheme(trans = .4)
+featurePlot(x = train_df[,2:31], 
+            y = train_df$diagnosis,
+            scales = list(x = list(relation="free"), 
+                          y = list(relation="free")),
+            plot = "density", pch = "|",
+            auto.key = list(columns = 2))
+```
+
+\center __Figure 3__ One-to-one relation between classes and covariates \center
+
+```{r echo=FALSE}
+ctrl <- trainControl(method = "repeatedcv",
+                     summaryFunction = twoClassSummary,
+                     classProbs = TRUE)
+set.seed(123123)
+model.glm <- train(x=train_df[,2:31],
+                  y=train_df$diagnosis,
+                  method ="glm",
+                  metric ="ROC",
+                  trControl =ctrl)
+
+model.glmn = readRDS("glmn_fit.rds")
+
+model.lda <-train(x=train_df[,2:31],
+                  y=train_df$diagnosis,
+                  method ="lda",
+                  metric ="ROC",
+                  trControl =ctrl)
+
+model.qda = readRDS("qda_fit.RDS")
+
+model.knn = readRDS("knn_fit.RDS")
+
+model.nb = readRDS("nb_fit.rds")
+
+svml.fit = readRDS("svml_fit.rds")
+
+svmr.fit = readRDS("svmr_fit.rds")
+
+rpart.fit = readRDS('rpart_fit.rds')
+
+rf.fit = readRDS('rf_fit.rds')
+
+gbmB.fit = readRDS('gbmB_fit.rds')
+
+gbmA.fit = readRDS('gbmA_fit.rds')
+
+resamp <- resamples(list(glm = model.glm,
+                         glmn = model.glmn,
+                         lda = model.lda,
+                         qda = model.qda,
+                         knn = model.knn,
+                         bayes = model.nb,
+                         svmr = svmr.fit,
+                         svml = svml.fit,
+                         rpart = rpart.fit, 
+                         rf = rf.fit,
+                         gbmB = gbmB.fit,
+                         gbmA = gbmA.fit))
+
+bwplot(resamp)
+```
+
+\center __Figure __ Model comparision on AUC, sensitivity and specificity \center
+
+\newpage
+
+```{r include=FALSE}
+summary(resamp)
+resamp$values
+
+roc = paste(resamp$models, "ROC", sep="~")
+roc_mean = resamp$values %>% as_tibble %>% dplyr::select(roc) %>% map_dbl(., ~mean(.x))
+spec = paste(resamp$models, "Spec", sep="~")
+spec_mean = resamp$values %>% as_tibble %>% dplyr::select(spec) %>% as.data.frame() %>% 
+map_dbl(., ~mean(.x))
+
+sens = paste(resamp$models, "Sens", sep="~")
+sens_mean = resamp$values %>% as_tibble %>% dplyr::select(sens) %>% as.data.frame() %>% 
+map_dbl(., ~mean(.x))
+
+tbl = 
+  rbind(roc_mean, spec_mean, sens_mean) %>% 
+  t() %>% as.tibble() %>% 
+  mutate(model = resamp$models) %>% 
+  dplyr::select(model, AUC=roc_mean,Sensitivity=sens_mean,Specificity=spec_mean) %>% 
+  arrange(desc(AUC))
+```
+
+\textbf{Table 1: Mean of AUC, sensitivity and specificity of different models}
+```{r echo=FALSE}
+as.tibble(tbl) %>% knitr::kable()
 ```
 
