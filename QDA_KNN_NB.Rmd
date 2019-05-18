@@ -229,7 +229,6 @@ km_vis <- fviz_cluster(list(data = dat1, cluster = km$cluster),
                       ellipse.type = "convex",
                       geom = c("point","text"),
                       labelsize = 5, palette = "Dark2")
-km_vis
 ```
 
 
