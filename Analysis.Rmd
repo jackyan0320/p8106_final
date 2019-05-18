@@ -76,10 +76,11 @@ corrplot(cor(x), tl.srt = 45, order = 'hclust', type = 'upper')
 
 
 ### One-to-one relation between classes and covariates
+### One-to-one relation between classes and covariates
 ```{r, cache=TRUE}
 # Distribution of response classes with regard to each variable
 transparentTheme(trans = .4)
-featurePlot(x = train_df[,2:31], 
+featurePlot(x = train_df[,2:11], 
             y = train_df$diagnosis,
             scales = list(x = list(relation="free"), 
                           y = list(relation="free")),
@@ -87,6 +88,25 @@ featurePlot(x = train_df[,2:31],
             auto.key = list(columns = 2))
 ```
 
+```{r}
+transparentTheme(trans = .4)
+featurePlot(x = train_df[,11:20], 
+            y = train_df$diagnosis,
+            scales = list(x = list(relation="free"), 
+                          y = list(relation="free")),
+            plot = "density", pch = "|",
+            auto.key = list(columns = 2))
+```
+
+```{r}
+transparentTheme(trans = .4)
+featurePlot(x = train_df[,20:31], 
+            y = train_df$diagnosis,
+            scales = list(x = list(relation="free"), 
+                          y = list(relation="free")),
+            plot = "density", pch = "|",
+            auto.key = list(columns = 2))
+```
 
 # Model building, assessing performance, and variable importance
 ```{r, echo=F}
