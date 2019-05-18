@@ -23,6 +23,7 @@ library(factoextra)
 library(gridExtra)
 library(RColorBrewer)
 library(gplots)
+library(gbm)
 # parallel processing with caret
 library(doParallel)
 cluster <- makePSOCKcluster(8)
@@ -109,18 +110,26 @@ A classification tree was built on the 30 predictors. Cp was tuned using cross-v
 Binomial loss boosting and AdaBoosting were tuned on 3 hyperparameters: number of trees, interaction depth, and shrinkage. Minimal node size was set to be 1. The best binomial loss boosting model and the best AdaBoosting model had AUC 0.9926 and 0.9930, respectively. Their AUC are comparable.
 
 
-## Model Selection
-Model selection was based on repeated cross-validation. The mean AUC was summarized in **Table 1**. The support vector machine with radial kernal and glmnet have the largest cross-validation AUC 0.9957. Since the glmnet model can be easier interpreted, we decided to use it as our final model.
+## Model Comparison and selection
 
-## Final model
-The final model is a mixture of ridge and lasso (alpha = 0.2, lambda = 0.014). Coefficients of the final regularized logistic regression (glmnet) are summarized in **Table 2**. Coefficients are arranged in descending order based on their absolute values. Among all the coefficients, SE of radius, worst value of radius, worst value of texture, worst value of concave points, and worst value of perimeter are the 5 predictors with largest absolute coefficients. Since all the predictors are centered and scaled before fitting the model, the coefficients are on the same scale as well. Therefore, their absolute values can reflect the importance of the predictors. 
+The mean cross-validation AUC, sensitivity and specificity are summarized in **Table 1**. SVM (radial kernal) has the highest sensitivity (0.965) and glmnet has the highest specificity (0.997). The AUC of all the models are higher than 0.93. 
 
-The train data ROC curve of the final model is shown in **Figure XXX**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be simply interpreted as the log odds ratio of Malignant tumor for one-unit chage in the corresponding covariate, keeping other covariates constant. 
+Model selection was based on cross-validation AUC. The support vector machine (radial kernal) and glmnet have the largest cross-validation AUC (0.9957). Since the glmnet model can be easier interpreted, we decided to use it as our final model. 
+
+## Final Model Interpretaion
+The final model is a mixture of ridge and lasso (alpha = 0.2, lambda = 0.014). Non-zero coefficients of the final regularized logistic regression (glmnet) are summarized in **Table 2**. The 25 non-zero coefficients are arranged in descending order based on their absolute values. SE of radius, worst value of radius, worst value of texture, worst value of concave points, and worst value of perimeter are the top 5 predictors with largest absolute coefficients. Since all the predictors are centered and scaled before fitting the model, the coefficients are on the same scale as well. Therefore, their absolute values can reflect the importance of the predictors. 
+
+The train data ROC curve of the final model is shown in **Figure XXX**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be simply interpreted as the log odds ratio of malignant tumor for one-unit change in the corresponding scaled covariate, keeping other covariates constant. For example, the coefficient for 
 
 \newpage
 
 ## Conclusion
-prompt: What were your findings? Are they what you expect? What insights into the data can you make?
+Prompt: 
+What were your findings? 
+We find that the regularized logistic regression including 25 covariates has the 
+Are they what you expect? 
+
+What insights into the data can you make?
 
 
 ## APPENDIX
@@ -183,7 +192,7 @@ featurePlot(x = train_df[,2:31],
             auto.key = list(columns = 2))
 ```
 
-\center __Figure 3__ One-to-one relation between classes and covariates \center
+\center __Figure 3__ One-to-one relation between response classes and covariates \center
 
 ```{r echo=FALSE}
 ctrl <- trainControl(method = "repeatedcv",
@@ -244,7 +253,6 @@ bwplot(resamp)
 
 ```{r include=FALSE}
 summary(resamp)
-resamp$values
 
 roc = paste(resamp$models, "ROC", sep="~")
 roc_mean = resamp$values %>% as_tibble %>% dplyr::select(roc) %>% map_dbl(., ~mean(.x))
