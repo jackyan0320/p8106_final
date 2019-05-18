@@ -54,7 +54,7 @@ test_df =
 
 ## Introduction
 
-This dataset includes different features which were computed from a digitized image of a fine needle aspirate (FNA) of a breast mass. The FNA describes the characteristics of the cell nuclei present in the image. Ten real-valued features are computed for each cell nucleus. The features include radius, texture, perimeter, area, compactness, concavity, concave points, symmetry, and fractal dimension. In this project, we aim to use the lab results to determine which features contribute to a better diagnosis result of breast mass (M = malignant, B = benign). In the dataset, we have 357 benign observations and 212 malignant observations, so the two classes are balanced.
+After skin cancer, breast cancer is the most common cancer diagnosed in women in the United States. The signs and symptoms of breast cancer may include a breast lump or thickening that feels different from the surrounding tissue, change in the size, shape or appearance of a breast, etc. However, most of the breast mass is benign, which means they are not the indicator of breast cancer. This dataset includes different features that were computed from a digitized image of a fine needle aspirate (FNA) of a breast mass. FNA is a diagnostic procedure used to investigate lumps or masses. In this technique, a thin, hollow needle is inserted into the mass for a sampling of cells that, after being stained, will be examined under a microscope. The FNA describes the characteristics of the cell nuclei present in the image. Ten real-valued features are computed for each cell nucleus. The features include radius, texture, perimeter, area, compactness, concavity, concave points, symmetry, and fractal dimension. In this project, we aim to use the lab results to determine which features contribute to a better diagnosis result of breast mass (M = malignant, B = benign). In the dataset, we have 357 benign observations and 212 malignant observations, so the two classes are balanced.
 
 ## Dataset Partitioning
 The original dataset contains 569 observations, among which 456 were randomly partitioned into the training set, and 113 into the test set. The training set was used to conduct model selection based on 10-fold cross-validation, and the test set was used to verify the model selection result. 
@@ -122,12 +122,11 @@ The final model is a mixture of ridge and lasso (alpha = 0.2, lambda = 0.014). N
 The train data ROC curve of the final model is shown in **(Figure 4)**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be simply interpreted as the log odds ratio of malignant tumor for one-unit change in the corresponding scaled covariate, keeping other covariates constant. For example, the coefficient for 
 
 ## Conclusion
-Prompt: 
-What were your findings? 
-We find that the regularized logistic regression including 25 covariates has the 
-Are they what you expect? 
+We found that the regularized logistic regression including 25 covariates has the best performance as well as interpretability. This finding is understandable. There is a high correlation among the predictors, so regularization can mitigate the effect of correlation and generate a good prediction on this data. Also, our exploratory analyses **(Figure S1-S3)** found that the two response classes can be well separated, so the high AUC values of all the models are reasonable. 
 
-What insights into the data can you make?
+The predictors in the dataset are different from other datasets because for a single characteristic such as smoothness, its mean, standard error, and worst value are all used as predictors. The reason why mean and worst values are included is easy to understand, but it is not obvious why standard errors are included. In fact, the most important predictor in our final model is the SE of the radius. Our hypothesis is that high standard error reflects the heterogeneity of the cells, so it is positively related to the probability of cancer. 
+
+The worst values of the characteristics are in fact among the most important predictors in the final model. This finding may have clinical significance and facilitate a more accurate diagnosis.
 
 \newpage
 
