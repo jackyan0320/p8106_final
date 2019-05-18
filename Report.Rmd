@@ -31,16 +31,16 @@ registerDoParallel(cluster)
 
 ```{r, include=FALSE}
 set.seed(123123)
-dat = 
-  read_csv("./data.csv") %>% 
-  dplyr::select(-id, -X33)
-dim(dat)
-test_dat = sample_n(dat, 569/5)
-dim(test_dat)
-train_dat = anti_join(dat, test_dat)
-dim(train_dat)
-write_csv(train_dat, "train.csv")
-write_csv(test_dat, "test.csv")
+# dat = 
+#   read_csv("./data.csv") %>% 
+#   dplyr::select(-id, -X33)
+# dim(dat)
+# test_dat = sample_n(dat, 569/5)
+# dim(test_dat)
+# train_dat = anti_join(dat, test_dat)
+# dim(train_dat)
+# write_csv(train_dat, "train.csv")
+# write_csv(test_dat, "test.csv")
 
 train_df = 
   read_csv("./train.csv") %>% janitor::clean_names() %>% 
@@ -60,29 +60,29 @@ The original dataset contains 569 observations, among which 456 were randomly pa
 
 ## Exploratory Data Analysis
 
-#### 1. K Means Clustering (Unsupervised learning)
+#### 1. K Means Clustering
 
-In 2-means clustering **(Figure 1)**, we seek to partition the observations into a pre-specified number of clusters, in this case, we have specified the number of clusters as 2 using the `fviz_nbclust` function to determine the optimized the number of clusters. The number of optimized clusters exactly equals to the number of our response categories ‘B’ and ‘M’. 
+K-means clustering was used to partition the observations into 2 clusters. In this dataset, the optimal number of clusters is 2, determined by average silhouette method using the the `fviz_nbclust` function. Interestingly, the number of optimized clusters exactly equals the number of response categories ‘B’ and ‘M’. **(Figure 1)** shows the distribution of clusters on the first 2 principle components (PCs). Dots are labelled by their response categories, although response information was not used in clustering. The two clusters can be well separated by the first 2 PCs, and the two outcome classes are separated into each of the clusters. 
 
 #### 2. Correlation plots
 
-Although there are some strong correlations among several covariates, we considered them as intuitive ones **(Figure 2)**. For example, the correlations among perimeters, radius, and area are all related to the size of the tumor. We decided to keep all covariates at this point for further analysis.
+The correlation plot **(Figure 2)** shows that some strong correlation exist among a subset of covariates. Intuitively, the high correlation makes sense. For example, the correlation among perimeter, radius, and area are all related to the size of the tumor. However, we did not know which covariates are better, so we decided to keep all covariates at this point, and let the models decide which variables are more important.
 
 #### 3. One-to-one relation between classes and covariates 
 
-According to the feature plot **(Figure 3)** which shows the one-to-one relation between classes and covariate. The ‘M’ (malignant tutor) class generally has larger radius mean, texture mean, perimeter mean, area mean, compactness mean, smoothness mean and concavity mean compare to those of ‘B’ (benign) tumors. We will circle back after the thorough analysis to check if the conclusions we obtain are identical.
+According to the feature plot **(Figure 3)** that shows the one-to-one relation between the response and covariates, The ‘M’ (malignant tutor) class generally has larger radius mean, texture mean, perimeter mean, area mean, compactness mean, smoothness mean and concavity mean compare to those of ‘B’ (benign) tumors. The two classes can be well separated on many individual covariates, such as radius, texture and concave points.
 
 ## Models
 
-All the 30 covariates were included in all the models. The 30 predictors are the means, standard errors and worst values of the 10 characteristics measured on the cell nuclei. Ordinary and regularized Logistic regression, Linear and quadratic discriminant analysis, Naive Bayes, KNN, classification trees, random forests, and ensemble methods were used to fit the data. The area under the ROC curve (AUC) were calculated from repeated cross-validation and used to compare models. For models that require tuning, repeated cross-validation was used to decide the best hyperparameter(s) that corresponds to the largest AUC.
+All the 30 covariates were included in all the models. The 30 predictors are the means, standard errors and worst values of the 10 characteristics measured on the cell nuclei. Ordinary and regularized Logistic regression, Linear and quadratic discriminant analysis, Naive Bayes, KNN, support vector machines, classification trees, random forests, and ensemble methods were used to fit the data. The area under the ROC curve (AUC) were calculated from repeated cross-validation and used to compare models. For models that require tuning, repeated cross-validation was used to decide the optimal hyperparameter(s) that corresponds to the largest AUC.
 
 #### 1. Logistic regression and regularized logistic regression (glmnet)
 
-Both logistic regression and regularized logistic regression models (glmnet) were built to fit the 30 predictors on the response. Data were centered and scaled before fitting into the glmnet model. Cross-validation showed that the logistic regression has AUC 0.9544, sensitivity 0.9821 and specificity 0.8856. The best parameter of glmnet is alpha 0.2 and lambda 0.014, with AUC 0.9961, which is better than the logistic regression model.
+Both logistic regression and regularized logistic regression models (glmnet) were built to fit the 30 predictors on the response. Data were centered and scaled before fitting the glmnet model. Cross-validation showed that the logistic regression has AUC 0.9544, sensitivity 0.9821 and specificity 0.8856. The best parameter of glmnet is alpha 0.2 and lambda 0.014, with AUC 0.9961, which is better than the logistic regression model.
  
 #### 2. LDA 
 
-The assumption of LDA is that all the variables follow a multivariate normal distribution. Therefore, each covariate has its own mean and shares a common variance-covariance matrix. All 30 predictors were included in this model. By fitting the model with the cross-validation method, this LDA model has AUC 0.9917, sensitivity 0.8958 and specificity 0.9930.
+The assumption of LDA is that all the variables follow a multivariate normal distribution. Therefore, each covariate has its own mean and shares a common variance-covariance matrix. All 30 predictors were included in this model. By fitting the model with the cross-validation method, the optimal LDA model has AUC 0.9917, sensitivity 0.8958 and specificity 0.9930.
 
 #### 3. QDA
 
@@ -94,11 +94,11 @@ Naive Bayes assumes that the features are conditionally independent given the cl
 
 #### 5. KNN
 
-All 30 predictors were included in this KNN model, and the best tuning parameter is 33. This model has AUC equals to 0.9925, sensitivity equals to 0.8784 and specificity equals to 0.9894.
+All 30 predictors were included in this KNN model, and the best tuning parameter is 33. This model has AUC 0.9925, sensitivity 0.8784 and specificity 0.9894.
 
 #### 6. Support Vector Machine (linear and radial kernel)
 
-
+Support vector machines with both linear kernel and radial kernel were fit on the data. The optimal linear kernel has AUC 0.994 and the optimal radial kernel has AUC 0.996. The radial kernel is slightly better.
 
 #### 7. Classification Tree and random forests
 
@@ -108,13 +108,19 @@ A classification tree was built on the 30 predictors. Cp was tuned using cross-v
 
 Binomial loss boosting and AdaBoosting were tuned on 3 hyperparameters: number of trees, interaction depth, and shrinkage. Minimal node size was set to be 1. The best binomial loss boosting model and the best AdaBoosting model had AUC 0.9926 and 0.9930, respectively. Their AUC are comparable.
 
+
 ## Model Selection
+Model selection was based on repeated cross-validation. The mean AUC was summarized in **Table 1**. The support vector machine with radial kernal and glmnet have the largest cross-validation AUC 0.9957. Since the glmnet model can be easier interpreted, we decided to use it as our final model.
 
-Model selection was based on repeated cross-validation. The glmnet model had the largest AUC, so we decided to use it as our final model.
+## Final model
+The final model is a mixture of ridge and lasso (alpha = 0.2, lambda = 0.014). Coefficients of the final regularized logistic regression (glmnet) are summarized in **Table 2**. Coefficients are arranged in descending order based on their absolute values. Among all the coefficients, SE of radius, worst value of radius, worst value of texture, worst value of concave points, and worst value of perimeter are the 5 predictors with largest absolute coefficients. Since all the predictors are centered and scaled before fitting the model, the coefficients are on the same scale as well. Therefore, their absolute values can reflect the importance of the predictors. 
 
+The train data ROC curve of the final model is shown in **Figure XXX**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be interpreted as the log odds ratio of for one-unit chage in the covariate 
 
 \newpage
 
+## Conclusion
+prompt: What were your findings? Are they what you expect? What insights into the data can you make?
 
 ## APPENDIX
 
@@ -137,6 +143,9 @@ km_vis <- fviz_cluster(list(data = dat1, cluster = km$cluster),
                       labelsize = 5, palette = "Dark2")
 km_vis
 saveRDS(km_vis, "km_vis.rds")
+
+clst_plot = fviz_nbclust(dat1,FUNcluster = kmeans,method = "silhouette")
+saveRDS(clst_plot, "nclust.rds")
 ```
 
 ```{r echo=FALSE}
@@ -163,7 +172,7 @@ corrplot(cor(x), tl.srt = 45, order = 'hclust', type = 'upper')
 
 \center __Figure 2__ Correlation plots \center
 
-```{r echo=FALSE}
+```{r echo=FALSE, warning=F}
 transparentTheme(trans = .4)
 featurePlot(x = train_df[,2:31], 
             y = train_df$diagnosis,
@@ -256,6 +265,54 @@ tbl =
 
 \textbf{Table 1: Mean of AUC, sensitivity and specificity of different models}
 ```{r echo=FALSE}
-as.tibble(tbl) %>% knitr::kable()
+as.tibble(tbl) %>% knitr::kable(digits=4)
+```
+
+\textbf{Table 2: Non-zero Coefficients of the Final Model }
+```{r}
+# model.glmn$bestTune
+formula3 <- 
+  diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + 
+  smoothness_mean + compactness_mean + concavity_mean + concave_points_mean +
+  symmetry_mean + fractal_dimension_mean + radius_worst + texture_worst +
+  perimeter_worst + area_worst + smoothness_worst + compactness_worst + concavity_worst +
+  concave_points_worst + symmetry_worst + fractal_dimension_worst + radius_se + texture_se +
+  perimeter_se + area_se + smoothness_se + compactness_se + concavity_se + concave_points_se +
+  symmetry_se + fractal_dimension_se
+
+train_scaled = 
+  scale(train_df[,-1]) %>% as.tibble() %>% 
+  mutate(diagnosis = train_df$diagnosis)
+x <- model.matrix(formula3, train_scaled)[,-1]
+
+y <- train_df$diagnosis %>% as.character() 
+y = if_else(y == "M", 1, 0)
+glmn_best <- glmnet(x, y, family = "binomial",
+                       alpha = 0.2, lambda = c(0.01407778,0.01407779))
+coef = coef(glmn_best) %>% as.matrix %>% as.data.frame()
+coef$term = rownames(coef)
+# coeffients of the final model
+coef = 
+  coef %>% as.tibble() %>% 
+  dplyr::select(term, s0) %>% 
+  rename(coef = s0) %>% 
+  filter(coef != 0, term != "(Intercept)") %>% 
+  arrange(desc(abs(coef)))
+coef %>% knitr::kable(digits=4)
+```
+
+```{r}
+clst_plot = readRDS("nclust.rds")
+clst_plot
+```
+
+```{r}
+model.glmn = readRDS("glmn_fit.rds")
+test.pred.prob  <- predict(model.glmn, type = "prob")[,1]
+test.pred <- rep("B", length(test.pred.prob))
+test.pred[test.pred.prob > 0.5] <- "M"
+roc.glm <- roc(train_df$diagnosis, test.pred.prob)
+plot.roc(roc.glm, legacy.axes = TRUE, print.auc = TRUE)
+plot.roc(smooth(roc.glm), col = 4, add = TRUE)
 ```
 
