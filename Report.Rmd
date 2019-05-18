@@ -71,7 +71,7 @@ The correlation plot **(Figure 2)** shows that some strong correlation exist amo
 
 #### 3. One-to-one relation between classes and covariates 
 
-According to the feature plot **(Figure 3)** that shows the one-to-one relation between the response and covariates, The ‘M’ (malignant tutor) class generally has larger radius mean, texture mean, perimeter mean, area mean, compactness mean, smoothness mean and concavity mean compare to those of ‘B’ (benign) tumors. The two classes can be well separated on many individual covariates, such as radius, texture and concave points.
+According to the feature plots **(Figure S1-S3)** that show the one-to-one relation between the response and covariates, the ‘M’ (malignant tutor) class generally has larger radius mean, texture mean, perimeter mean, area mean, compactness mean, smoothness mean and concavity mean compare to those of ‘B’ (benign) tumors. The two classes can be well separated on many individual covariates, such as **radius, texture and concave points.**
 
 ## Models
 
@@ -112,16 +112,14 @@ Binomial loss boosting and AdaBoosting were tuned on 3 hyperparameters: number o
 
 ## Model Comparison and selection
 
-The mean cross-validation AUC, sensitivity and specificity are summarized in **Table 1**. SVM (radial kernal) has the highest sensitivity (0.965) and glmnet has the highest specificity (0.997). The AUC of all the models are higher than 0.93. 
+The mean cross-validation AUC, sensitivity and specificity are summarized in **Table 1**. SVM (radial kernal) has the highest sensitivity (0.965) and glmnet has the highest specificity (0.997). The AUC of all the models are higher than 0.93 **Figure 3**. 
 
 Model selection was based on cross-validation AUC. The support vector machine (radial kernal) and glmnet have the largest cross-validation AUC (0.9957). Since the glmnet model can be easier interpreted, we decided to use it as our final model. 
 
 ## Final Model Interpretaion
 The final model is a mixture of ridge and lasso (alpha = 0.2, lambda = 0.014). Non-zero coefficients of the final regularized logistic regression (glmnet) are summarized in **Table 2**. The 25 non-zero coefficients are arranged in descending order based on their absolute values. SE of radius, worst value of radius, worst value of texture, worst value of concave points, and worst value of perimeter are the top 5 predictors with largest absolute coefficients. Since all the predictors are centered and scaled before fitting the model, the coefficients are on the same scale as well. Therefore, their absolute values can reflect the importance of the predictors. 
 
-The train data ROC curve of the final model is shown in **Figure XXX**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be simply interpreted as the log odds ratio of malignant tumor for one-unit change in the corresponding scaled covariate, keeping other covariates constant. For example, the coefficient for 
-
-\newpage
+The train data ROC curve of the final model is shown in **Figure 4**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be simply interpreted as the log odds ratio of malignant tumor for one-unit change in the corresponding scaled covariate, keeping other covariates constant. For example, the coefficient for 
 
 ## Conclusion
 Prompt: 
@@ -131,8 +129,11 @@ Are they what you expect?
 
 What insights into the data can you make?
 
+\newpage
 
-## APPENDIX
+
+
+## Figures and Tables
 
 ```{r echo=FALSE, eval=FALSE}
 dat1 <- read.csv("data.csv", row.names=NULL)
@@ -166,7 +167,16 @@ km_vis
 \center __Figure 1__ 2-means clustering on the first two principle components \center
 
 ```{r echo=FALSE}
-x <- model.matrix(diagnosis~., train_df)[,-1]
+formula3 <- 
+  diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + 
+  smoothness_mean + compactness_mean + concavity_mean + concave_points_mean +
+  symmetry_mean + fractal_dimension_mean + radius_worst + texture_worst +
+  perimeter_worst + area_worst + smoothness_worst + compactness_worst + concavity_worst +
+  concave_points_worst + symmetry_worst + fractal_dimension_worst + radius_se + texture_se +
+  perimeter_se + area_se + smoothness_se + compactness_se + concavity_se + concave_points_se +
+  symmetry_se + fractal_dimension_se
+
+x <- model.matrix(formula3, train_df)[,-1]
 y <- train_df$diagnosis
 theme1 <- trellis.par.get()
 theme1$plot.symbol$col <- rgb(.2, .4, .2, .5) 
@@ -180,21 +190,11 @@ par(cex = 0.7)
 corrplot(cor(x), tl.srt = 45, order = 'hclust', type = 'upper')
 ```
 
-\center __Figure 2__ Correlation plots \center
+\center __Figure 2__ Correlation plot of predictors \center
 
-```{r echo=FALSE, warning=F}
-transparentTheme(trans = .4)
-featurePlot(x = train_df[,2:31], 
-            y = train_df$diagnosis,
-            scales = list(x = list(relation="free"), 
-                          y = list(relation="free")),
-            plot = "density", pch = "|",
-            auto.key = list(columns = 2))
-```
+\newpage
 
-\center __Figure 3__ One-to-one relation between response classes and covariates \center
-
-```{r echo=FALSE}
+```{r echo=FALSE, warning=FALSE}
 ctrl <- trainControl(method = "repeatedcv",
                      summaryFunction = twoClassSummary,
                      classProbs = TRUE)
@@ -247,7 +247,21 @@ resamp <- resamples(list(glm = model.glm,
 bwplot(resamp)
 ```
 
-\center __Figure __ Model comparision on AUC, sensitivity and specificity \center
+\center __Figure 3__ Model comparision on AUC, sensitivity and specificity \center
+
+\newpage 
+
+```{r echo=FALSE}
+model.glmn = readRDS("glmn_fit.rds")
+test.pred.prob  <- predict(model.glmn, type = "prob")[,1]
+test.pred <- rep("B", length(test.pred.prob))
+test.pred[test.pred.prob > 0.5] <- "M"
+roc.glm <- roc(train_df$diagnosis, test.pred.prob)
+plot.roc(roc.glm, legacy.axes = TRUE, print.auc = TRUE)
+plot.roc(smooth(roc.glm), col = 4, add = TRUE)
+```
+
+\center __Figure 4__ Train data ROC curve of the final model \center
 
 \newpage
 
@@ -268,17 +282,45 @@ tbl =
   rbind(roc_mean, spec_mean, sens_mean) %>% 
   t() %>% as.tibble() %>% 
   mutate(model = resamp$models) %>% 
-  dplyr::select(model, AUC=roc_mean,Sensitivity=sens_mean,Specificity=spec_mean) %>% 
-  arrange(desc(AUC))
+  dplyr::select(model, CV_AUC=roc_mean, CV_Sens=sens_mean, CV_Spec=spec_mean) %>% 
+  arrange(desc(CV_AUC))
+
+pred_glm = predict.train(model.glm, newdata = test_df, type = 'prob')[,2]
+pred_glmn = predict.train(model.glmn, newdata = test_df, type = 'prob')[,2]
+pred_lda = predict.train(model.lda, newdata = test_df, type = 'prob')[,2]
+pred_knn = predict.train(model.knn, newdata = test_df, type = 'prob')[,2]
+pred_qda = predict.train(model.qda, newdata = test_df, type = 'prob')[,2]
+pred_nb = predict.train(model.nb, newdata = test_df, type = 'prob')[,2]
+pred_svmr = predict.train(svmr.fit, newdata = test_df, type = 'prob')[,2]
+pred_svml = predict.train(svml.fit, newdata = test_df, type = 'prob')[,2]
+pred_rpart = predict.train(rpart.fit, newdata = test_df, type = 'prob')[,2]
+pred_rf = predict.train(rf.fit, newdata = test_df, type = 'prob')[,2]
+pred_gbmB = predict.train(gbmB.fit, newdata = test_df, type = 'prob')[,2]
+pred_gbmA = predict.train(gbmA.fit, newdata = test_df, type = 'prob')[,2]
+
+roc.glm <- roc(test_df$diagnosis, pred_glm)
+roc.glmn <- roc(test_df$diagnosis, pred_glmn)
+roc.lda <- roc(test_df$diagnosis, pred_lda)
+roc.nb <- roc(test_df$diagnosis, pred_nb)
+roc.qda <- roc(test_df$diagnosis, pred_qda)
+roc.knn <- roc(test_df$diagnosis, pred_knn)
+roc.svmr <- roc(test_df$diagnosis, pred_svmr)
+roc.svml <- roc(test_df$diagnosis, pred_svml)
+roc.rpart <- roc(test_df$diagnosis, pred_rpart)
+roc.rf <- roc(test_df$diagnosis, pred_rf)
+roc.gbmB <- roc(test_df$diagnosis, pred_gbmB)
+roc.gbmA <- roc(test_df$diagnosis, pred_gbmA)
+
+Test_AUC = c(roc.svmr$auc[1], roc.glmn$auc[1], roc.svml$auc[1], roc.rf$auc[1], roc.gbmA$auc[1], roc.gbmB$auc[1], roc.knn$auc[1], roc.lda$auc[1], roc.qda$auc[1], roc.nb$auc[1], roc.glm$auc[1], roc.rpart$auc[1])
 ```
 
-\textbf{Table 1: Mean of AUC, sensitivity and specificity of different models}
+\textbf{Table 1: Cross-validation AUC, sensitivity, specificity, and test data AUC of different models}
 ```{r echo=FALSE}
-as.tibble(tbl) %>% knitr::kable(digits=4)
+cbind(tbl, Test_AUC) %>% as.tibble() %>% knitr::kable(digits=4)
 ```
 
 \textbf{Table 2: Non-zero Coefficients of the Final Model }
-```{r}
+```{r echo=FALSE}
 # model.glmn$bestTune
 formula3 <- 
   diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + 
@@ -310,18 +352,119 @@ coef =
 coef %>% knitr::kable(digits=4)
 ```
 
-```{r}
+
+
+
+\newpage
+
+## APPENDIX
+
+```{r, echo=FALSE}
+transparentTheme(trans = .4)
+featurePlot(x = train_df[,2:11], 
+            y = train_df$diagnosis,
+            scales = list(x = list(relation="free"), 
+                          y = list(relation="free")),
+            plot = "density", pch = "|",
+            auto.key = list(columns = 2))
+```
+
+\center __Figure S1__ One-to-one relation between response classes and covariates 1 \center
+
+
+```{r echo=FALSE}
+transparentTheme(trans = .4)
+featurePlot(x = train_df[,11:20], 
+            y = train_df$diagnosis,
+            scales = list(x = list(relation="free"), 
+                          y = list(relation="free")),
+            plot = "density", pch = "|",
+            auto.key = list(columns = 2))
+```
+
+\center __Figure S2__ One-to-one relation between response classes and covariates 2 \center
+
+
+```{r echo=FALSE}
+transparentTheme(trans = .4)
+featurePlot(x = train_df[,20:31], 
+            y = train_df$diagnosis,
+            scales = list(x = list(relation="free"), 
+                          y = list(relation="free")),
+            plot = "density", pch = "|",
+            auto.key = list(columns = 2))
+```
+
+\center __Figure S3__ One-to-one relation between response classes and covariates 3 \center
+
+
+```{r echo=FALSE}
 clst_plot = readRDS("nclust.rds")
 clst_plot
 ```
 
-```{r}
-model.glmn = readRDS("glmn_fit.rds")
-test.pred.prob  <- predict(model.glmn, type = "prob")[,1]
-test.pred <- rep("B", length(test.pred.prob))
-test.pred[test.pred.prob > 0.5] <- "M"
-roc.glm <- roc(train_df$diagnosis, test.pred.prob)
-plot.roc(roc.glm, legacy.axes = TRUE, print.auc = TRUE)
-plot.roc(smooth(roc.glm), col = 4, add = TRUE)
+\center __Figure S4__ Optimal number of clusters determined by average silhouette method \center
+
+
+```{r echo=FALSE}
+ggplot(model.glmn,xTrans = function(x)log(x), highlight = TRUE)
 ```
+
+\center __Figure S5__ Regularized logistic regression model tuning parameter selection \center
+
+
+```{r echo=FALSE}
+ggplot(model.knn,xTrans = function(x)log(x), highlight = TRUE)
+```
+
+\center __Figure S6__ KNN model tuning parameter selection \center
+
+
+```{r echo=FALSE}
+ggplot(model.nb,xTrans = function(x)log(x), highlight = TRUE)
+```
+
+\center __Figure S7__ Naive Bayes model tuning parameter selection \center
+
+
+```{r echo=FALSE}
+ggplot(svml.fit, highlight = TRUE)
+```
+
+\center __Figure S8__ Support Vector Machine (linear kernel) tuning parameter selection \center
+
+
+```{r echo=FALSE, warning=FALSE}
+ggplot(svmr.fit, highlight = TRUE)
+```
+
+\center __Figure S9__ Support Vector Machine (radial kernel) tuning parameter selection \center
+
+
+```{r echo=FALSE}
+ggplot(rpart.fit, highlight = TRUE)
+```
+
+\center __Figure S10__ Classification Tree tuning parameter selection \center
+
+
+```{r echo=FALSE, warning=FALSE}
+ggplot(rf.fit, highlight = TRUE)
+```
+
+\center __Figure S11__ Random Forests tuning parameter selection \center
+
+
+```{r echo=FALSE, warning=FALSE}
+ggplot(gbmB.fit, highlight = TRUE)
+```
+
+\center __Figure S12__ Binomial loss boosting tuning parameter selection \center
+
+
+```{r echo=FALSE}
+ggplot(gbmA.fit, highlight = TRUE)
+```
+
+\center __Figure S13__ AdaBoosting tuning parameter selection \center
 
