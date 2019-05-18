@@ -63,7 +63,7 @@ The original dataset contains 569 observations, among which 456 were randomly pa
 
 #### 1. K Means Clustering
 
-K-means clustering was used to partition the observations into 2 clusters. In this dataset, the optimal number of clusters is 2, determined by average silhouette method using the the `fviz_nbclust` function. Interestingly, the number of optimized clusters exactly equals the number of response categories ‘B’ and ‘M’. **(Figure 1)** shows the distribution of clusters on the first 2 principle components (PCs). Dots are labelled by their response categories, although response information was not used in clustering. The two clusters can be well separated by the first 2 PCs, and the two outcome classes are separated into each of the clusters. 
+K-means clustering was used to partition the observations into 2 clusters. In this dataset, the optimal number of clusters is 2, determined by average silhouette method using the the `fviz_nbclust` function. Interestingly, the number of optimized clusters exactly equals the number of response categories ‘B’ and ‘M’. **(Figure 1)** shows the distribution of clusters on the first 2 principle components (PCs). Dots are labelled by their response categories, although response information was not used in clustering. The two clusters can be well separated by the first 2 PCs, and the two outcome classes are separated into each of the clusters **(Figure S4)**. 
 
 #### 2. Correlation plots
 
@@ -75,7 +75,7 @@ According to the feature plots **(Figure S1-S3)** that show the one-to-one relat
 
 ## Models
 
-All the 30 covariates were included in all the models. The 30 predictors are the means, standard errors and worst values of the 10 characteristics measured on the cell nuclei. Ordinary and regularized Logistic regression, Linear and quadratic discriminant analysis, Naive Bayes, KNN, support vector machines, classification trees, random forests, and ensemble methods were used to fit the data. The area under the ROC curve (AUC) were calculated from repeated cross-validation and used to compare models. For models that require tuning, repeated cross-validation was used to decide the optimal hyperparameter(s) that corresponds to the largest AUC.
+All the 30 covariates were included in all the models. The 30 predictors are the means, standard errors and worst values of the 10 characteristics measured on the cell nuclei. Ordinary and regularized Logistic regression, Linear and quadratic discriminant analysis, Naive Bayes, KNN, support vector machines, classification trees, random forests, and ensemble methods were used to fit the data. The area under the ROC curve (AUC) were calculated from repeated cross-validation and used to compare models. For models that require tuning, repeated cross-validation was used to decide the optimal hyperparameter(s) that corresponds to the largest AUC **(Figure S5-S13)**.
 
 #### 1. Logistic regression and regularized logistic regression (glmnet)
 
@@ -112,14 +112,14 @@ Binomial loss boosting and AdaBoosting were tuned on 3 hyperparameters: number o
 
 ## Model Comparison and selection
 
-The mean cross-validation AUC, sensitivity and specificity are summarized in **Table 1**. SVM (radial kernal) has the highest sensitivity (0.965) and glmnet has the highest specificity (0.997). The AUC of all the models are higher than 0.93 **Figure 3**. 
+The mean cross-validation AUC, sensitivity and specificity are summarized in **(Table 1)**. SVM (radial kernal) has the highest sensitivity (0.965) and glmnet has the highest specificity (0.997). The AUC of all the models are higher than 0.93 **(Figure 3)**. 
 
 Model selection was based on cross-validation AUC. The support vector machine (radial kernal) and glmnet have the largest cross-validation AUC (0.9957). Since the glmnet model can be easier interpreted, we decided to use it as our final model. 
 
 ## Final Model Interpretaion
-The final model is a mixture of ridge and lasso (alpha = 0.2, lambda = 0.014). Non-zero coefficients of the final regularized logistic regression (glmnet) are summarized in **Table 2**. The 25 non-zero coefficients are arranged in descending order based on their absolute values. SE of radius, worst value of radius, worst value of texture, worst value of concave points, and worst value of perimeter are the top 5 predictors with largest absolute coefficients. Since all the predictors are centered and scaled before fitting the model, the coefficients are on the same scale as well. Therefore, their absolute values can reflect the importance of the predictors. 
+The final model is a mixture of ridge and lasso (alpha = 0.2, lambda = 0.014). Non-zero coefficients of the final regularized logistic regression (glmnet) are summarized in **(Table 2)**. The 25 non-zero coefficients are arranged in descending order based on their absolute values. SE of radius, worst value of radius, worst value of texture, worst value of concave points, and worst value of perimeter are the top 5 predictors with largest absolute coefficients. Since all the predictors are centered and scaled before fitting the model, the coefficients are on the same scale as well. Therefore, their absolute values can reflect the importance of the predictors. 
 
-The train data ROC curve of the final model is shown in **Figure 4**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be simply interpreted as the log odds ratio of malignant tumor for one-unit change in the corresponding scaled covariate, keeping other covariates constant. For example, the coefficient for 
+The train data ROC curve of the final model is shown in **(Figure 4)**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be simply interpreted as the log odds ratio of malignant tumor for one-unit change in the corresponding scaled covariate, keeping other covariates constant. For example, the coefficient for 
 
 ## Conclusion
 Prompt: 
