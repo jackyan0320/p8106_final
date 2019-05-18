@@ -54,28 +54,33 @@ test_df =
 
 ## Introduction
 
-After skin cancer, breast cancer is the most common cancer diagnosed in women in the United States. The signs and symptoms of breast cancer may include a breast lump or thickening that feels different from the surrounding tissue, change in the size, shape or appearance of a breast, etc. However, most of the breast mass is benign, which means they are not the indicator of breast cancer. This dataset includes different features that were computed from a digitized image of a fine needle aspirate (FNA) of a breast mass. FNA is a diagnostic procedure used to investigate lumps or masses. In this technique, a thin, hollow needle is inserted into the mass for a sampling of cells that, after being stained, will be examined under a microscope. The FNA describes the characteristics of the cell nuclei present in the image. Ten real-valued features are computed for each cell nucleus. The features include radius, texture, perimeter, area, compactness, concavity, concave points, symmetry, and fractal dimension. In this project, we aim to use the lab results to determine which features contribute to a better diagnosis result of breast mass (M = malignant, B = benign). In the dataset, we have 357 benign observations and 212 malignant observations, so the two classes are balanced.
+Breast cancer is the second most common cancer diagnosed in women in the United States. The signs and symptoms of breast cancer may include a breast lump or thickening that feels different from the surrounding tissue, change in the size, shape or appearance of a breast, etc. However, most of the breast mass is benign, which means they are not the indicator of breast cancer. 
+
+This dataset includes different features that were computed from a digitized image of a fine needle aspirate (FNA) of a breast mass. FNA is a new diagnostic procedure used to investigate lumps or masses. In this technique, a thin, hollow needle is inserted into the mass for a sampling of cells that, after being stained, will be examined under a microscope. 
+
+The FNA describes the characteristics of the cell nuclei present in the image. Ten real-valued features are computed for each cell nucleus. The features include radius, texture, perimeter, area, compactness, concavity, concave points, symmetry, and fractal dimension. In this project, we aim to use the lab results to determine which features contribute to a better diagnosis result of breast mass (M = malignant, B = benign). In the dataset, we have 357 benign observations and 212 malignant observations, so the two classes are balanced.
 
 ## Dataset Partitioning
+
 The original dataset contains 569 observations, among which 456 were randomly partitioned into the training set, and 113 into the test set. The training set was used to conduct model selection based on 10-fold cross-validation, and the test set was used to verify the model selection result. 
 
 ## Exploratory Data Analysis
 
 #### 1. K Means Clustering
 
-K-means clustering was used to partition the observations into 2 clusters. In this dataset, the optimal number of clusters is 2, determined by average silhouette method using the the `fviz_nbclust` function. Interestingly, the number of optimized clusters exactly equals the number of response categories ‘B’ and ‘M’. **(Figure 1)** shows the distribution of clusters on the first 2 principle components (PCs). Dots are labelled by their response categories, although response information was not used in clustering. The two clusters can be well separated by the first 2 PCs, and the two outcome classes are separated into each of the clusters **(Figure S4)**. 
+K-means clustering was used to partition the observations into 2 clusters. In this dataset, the optimal number of clusters is 2, determined by average silhouette method using the the `fviz_nbclust` function. Interestingly, the number of optimized clusters exactly equals the number of response categories ‘B’ and ‘M’. **Figure 1** shows the distribution of clusters on the first 2 principle components (PCs). Dots are labelled by their response categories, although response information was not used in clustering. The two clusters can be well separated by the first 2 PCs. Benign cases are mainly in cluster 1, and Malignant cases in cluster 2 **(Figure S4)**. 
 
 #### 2. Correlation plots
 
-The correlation plot **(Figure 2)** shows that some strong correlation exist among a subset of covariates. Intuitively, the high correlation makes sense. For example, the correlation among perimeter, radius, and area are all related to the size of the tumor. However, we did not know which covariates are better, so we decided to keep all covariates at this point, and let the models decide which variables are more important.
+The correlation plot **(Figure 2)** shows that strong correlation exist among a subset of covariates. Intuitively, the high correlation makes sense. For example, the correlation among perimeter, radius, and area are all related to the size of the tumor. However, we did not know which covariates are better, so we decided to keep all covariates at this point, and let the models decide which variables are more important.
 
 #### 3. One-to-one relation between classes and covariates 
 
-According to the feature plots **(Figure S1-S3)** that show the one-to-one relation between the response and covariates, the ‘M’ (malignant tutor) class generally has larger radius mean, texture mean, perimeter mean, area mean, compactness mean, smoothness mean and concavity mean compare to those of ‘B’ (benign) tumors. The two classes can be well separated on many individual covariates, such as **radius, texture and concave points.**
+According to the feature plots **(Figures S1-S3)** that show the one-to-one relation between the response and covariates, the ‘M’ (malignant tutor) class generally has larger radius mean, texture mean, perimeter mean, area mean, compactness mean, smoothness mean and concavity mean compare to those of ‘B’ (benign) tumors. The two classes can be well separated on many individual covariates, such as radius_mean, area_se and concave_points_mean.
 
 ## Models
 
-All the 30 covariates were included in all the models. The 30 predictors are the means, standard errors and worst values of the 10 characteristics measured on the cell nuclei. Ordinary and regularized Logistic regression, Linear and quadratic discriminant analysis, Naive Bayes, KNN, support vector machines, classification trees, random forests, and ensemble methods were used to fit the data. The area under the ROC curve (AUC) were calculated from repeated cross-validation and used to compare models. For models that require tuning, repeated cross-validation was used to decide the optimal hyperparameter(s) that corresponds to the largest AUC **(Figure S5-S13)**.
+All the 30 covariates were included in all the models. The 30 predictors are the means, standard errors and worst values of the 10 characteristics measured on the cell nuclei. Ordinary and regularized Logistic regression, Linear and quadratic discriminant analysis, Naive Bayes, KNN, support vector machines, classification trees, random forests, and ensemble methods were used to fit the data. The area under the ROC curve (AUC) were calculated from repeated cross-validation and used to compare models. For models that require tuning, repeated cross-validation was used to decide the optimal hyperparameter(s) that corresponds to the largest AUC. Plots of CV AUC against the grid of hyperparameters are shown in **Figures S5-S13**.
 
 #### 1. Logistic regression and regularized logistic regression (glmnet)
 
@@ -112,17 +117,21 @@ Binomial loss boosting and AdaBoosting were tuned on 3 hyperparameters: number o
 
 ## Model Comparison and selection
 
-The mean cross-validation AUC, sensitivity and specificity are summarized in **(Table 1)**. SVM (radial kernal) has the highest sensitivity (0.965) and glmnet has the highest specificity (0.997). The AUC of all the models are higher than 0.93 **(Figure 3)**. 
+The mean cross-validation AUC, sensitivity and specificity are summarized in **Table 1**. SVM (radial kernal) has the highest sensitivity (0.965), while the glmnet model has the highest specificity (0.997). The AUC of all the models are higher than 0.93 **(Figure 3)**. 
 
-Model selection was based on cross-validation AUC. The support vector machine (radial kernal) and glmnet have the largest cross-validation AUC (0.9957). Since the glmnet model can be easier interpreted, we decided to use it as our final model. 
+Model selection was based on cross-validation AUC. The support vector machine (radial kernal) and glmnet model have the largest cross-validation AUC (0.9957). Since the glmnet model can be easier interpreted, we decided to use it as our final model. 
+
+Test set performance was also assessed and AUC is reported **(Table 1)**. The ordering of test AUC is similar with cross-validation AUC, so the results of cross-validation is valid.
 
 ## Final Model Interpretaion
-The final model is a mixture of ridge and lasso (alpha = 0.2, lambda = 0.014). Non-zero coefficients of the final regularized logistic regression (glmnet) are summarized in **(Table 2)**. The 25 non-zero coefficients are arranged in descending order based on their absolute values. SE of radius, worst value of radius, worst value of texture, worst value of concave points, and worst value of perimeter are the top 5 predictors with largest absolute coefficients. Since all the predictors are centered and scaled before fitting the model, the coefficients are on the same scale as well. Therefore, their absolute values can reflect the importance of the predictors. 
 
-The train data ROC curve of the final model is shown in **(Figure 4)**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be simply interpreted as the log odds ratio of malignant tumor for one-unit change in the corresponding scaled covariate, keeping other covariates constant. For example, the coefficient for 
+The final model is a mixture of ridge and lasso (alpha = 0.2, lambda = 0.014). Non-zero coefficients of the final regularized logistic regression (glmnet) are summarized in **Table 2**. The 25 non-zero coefficients are arranged in descending order based on their absolute values. SE of radius, worst value of radius, worst value of texture, worst value of concave points, and worst value of perimeter are the top 5 predictors with largest absolute coefficients. Since all the predictors are centered and scaled before fitting the model, the coefficients are on the same scale as well. Therefore, their absolute values can reflect the importance of the predictors. 
+
+The train data ROC curve of the final model is shown in **Figure 4**. The AUC for the train data is 0.997, indicating a good fit. Not only does our final model have best prediction performance, but is also easier to interpret as compared to other complex models. The coefficients can be simply interpreted as the log odds ratio of malignant tumor for one-unit change in the corresponding scaled covariate, keeping other covariates constant. 
 
 ## Conclusion
-We found that the regularized logistic regression including 25 covariates has the best performance as well as interpretability. This finding is understandable. There is a high correlation among the predictors, so regularization can mitigate the effect of correlation and generate a good prediction on this data. Also, our exploratory analyses **(Figure S1-S3)** found that the two response classes can be well separated, so the high AUC values of all the models are reasonable. 
+
+We found that the regularized logistic regression including 25 covariates has the best performance as well as interpretability. This finding is understandable. There is a high correlation among the predictors, so regularization can mitigate the effect of correlation and generate a good prediction on this data. Also, our exploratory analyses **(Figures S1-S3)** found that the two response classes can be well separated, so the high AUC values of all the models are reasonable. 
 
 The predictors in the dataset are different from other datasets because for a single characteristic such as smoothness, its mean, standard error, and worst value are all used as predictors. The reason why mean and worst values are included is easy to understand, but it is not obvious why standard errors are included. In fact, the most important predictor in our final model is the SE of the radius. Our hypothesis is that high standard error reflects the heterogeneity of the cells, so it is positively related to the probability of cancer. 
 
@@ -368,7 +377,7 @@ featurePlot(x = train_df[,2:11],
             auto.key = list(columns = 2))
 ```
 
-\center __Figure S1__ One-to-one relation between response classes and covariates 1 \center
+\center __Figure S1__ One-to-one relation between response classes and covariates (means) \center
 
 
 ```{r echo=FALSE}
@@ -381,7 +390,7 @@ featurePlot(x = train_df[,11:20],
             auto.key = list(columns = 2))
 ```
 
-\center __Figure S2__ One-to-one relation between response classes and covariates 2 \center
+\center __Figure S2__ One-to-one relation between response classes and covariates (standard errors) \center
 
 
 ```{r echo=FALSE}
@@ -394,7 +403,7 @@ featurePlot(x = train_df[,20:31],
             auto.key = list(columns = 2))
 ```
 
-\center __Figure S3__ One-to-one relation between response classes and covariates 3 \center
+\center __Figure S3__ One-to-one relation between response classes and covariates (worst) \center
 
 
 ```{r echo=FALSE}
