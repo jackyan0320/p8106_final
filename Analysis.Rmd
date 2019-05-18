@@ -15,6 +15,7 @@ library(pROC) # contains roc function. generate ROC curves
 library(MASS) # contains function lda and qda
 library(rpart) # CART
 library(rpart.plot)
+library(plotmo)
 
 # parallel processing with caret
 library(doParallel)
@@ -27,10 +28,12 @@ registerDoParallel(cluster)
 set.seed(123123)
 dat = 
   read_csv("./data.csv") %>% 
-  select(-id, -X33) 
-  dim(dat)
+  dplyr::select(-id, -X33)
+dim(dat)
 test_dat = sample_n(dat, 569/5)
+dim(test_dat)
 train_dat = anti_join(dat, test_dat)
+dim(train_dat)
 write_csv(train_dat, "train.csv")
 write_csv(test_dat, "test.csv")
 ```
@@ -119,7 +122,7 @@ ctrl <- trainControl(method = "repeatedcv",
                      summaryFunction = twoClassSummary,
                      classProbs = TRUE)
 set.seed(123123)
-model.glm <-train(x=train_df[,2:31],
+model.glm <- train(x=train_df[,2:31],
                   y=train_df$diagnosis,
                   method ="glm",
                   metric ="ROC",
@@ -127,7 +130,7 @@ model.glm <-train(x=train_df[,2:31],
 
 glm.fit <- glm(diagnosis~., data=train_df, family="binomial")
 # summary(glm.fit)
-
+model.glm$results
 contrasts(train_df$diagnosis)
 
 glm.pred.prob = predict(glm.fit, type = "response")
@@ -147,13 +150,14 @@ plot(roc.glm.test, legacy.axes = TRUE, print.auc = TRUE)
 ```{r, eval=F}
 set.seed(123123)
 glmnGrid <- expand.grid(.alpha = seq(0,1,length =6),
-                       .lambda = exp(seq(-6,-2,length =20)))
+                       .lambda = exp(seq(-6,-3,length =20)))
 model.glmn <- train(x=train_df[,2:31],
                    y=train_df$diagnosis,
                    method ="glmnet",
                    tuneGrid =glmnGrid,
                    metric ="ROC",
-                   trControl =ctrl)
+                   trControl =ctrl,
+                   preProc = c("center", "scale"))
 saveRDS(model.glmn, "glmn_fit.rds")
 ```
 
@@ -162,6 +166,7 @@ model.glmn = readRDS("glmn_fit.rds")
 ggplot(model.glmn,xTrans = function(x)log(x), highlight = TRUE)
 max(model.glmn$result$ROC)
 model.glmn$bestTune
+
 ```
 
 ### LDA **Need to use caret**
@@ -190,7 +195,7 @@ model.lda <-train(x=train_df[,2:31],
 set.seed(123123)
 qda.fit <- qda(diagnosis~.,
                data = train_df)
-
+set.seed(123123)
 model.qda <- train(x = train_df[,-1],
                    y = train_df$diagnosis,
                    method = "qda",
@@ -343,12 +348,11 @@ confusionMatrix(data = pred.svmr.test,
 set.seed(123123)
 rpart.fit <- train(formula3, train_df, 
                    method = "rpart",
-                   tuneGrid = data.frame(cp = exp(seq(-20,-2, len = 50))),
+                   tuneGrid = data.frame(cp = exp(seq(-20,-3, len = 50))),
                    trControl = ctrl,
                    metric = "ROC")
 saveRDS(rpart.fit, 'rpart_fit.rds')
 ```
-
 
 ```{r }
 rpart.fit = readRDS('rpart_fit.rds')
@@ -358,8 +362,6 @@ max(rpart.fit$result$ROC)
 ggplot(rpart.fit, highlight = TRUE)
 # Plot of the final model
 rpart.plot(rpart.fit$finalModel)
-tree_pruned = prune(tree_rpart, cp = one_se)
-rpart.plot(tree_pruned)
 ```
 
 The plot of the final model is shown above.
@@ -406,7 +408,7 @@ pred_rf = if_else(test_df$probM3 > 0.5, 'M', 'B')
 ### boosting (Adaboosting and binomial loss function)
 #### Binomial loss
 ```{r, eval=F}
-gbmB.grid <- expand.grid(n.trees = c(1000,2000,3000,4000),
+gbmB.grid <- expand.grid(n.trees = c(1000,2000,3000,4000,5000,6000,7000,8000),
                         interaction.depth = 1:8,
                         shrinkage = c(0.004,0.006,0.008,0.010),
                         n.minobsinnode = 1)
@@ -470,6 +472,8 @@ class_gbmA = if_else(gbmA.pred > 0.5, 'CH', 'MM')
 1 - mean(class_gbmA == test_df$Purchase)
 ```
 
+
+
 # Model comparison
 ```{r}
 resamp <- resamples(list(glm = model.glm,
@@ -493,8 +497,63 @@ summary(resamp)
 
 
 # Final model interpretation
+```{r}
+model.glmn$bestTune
+train_scaled = 
+  scale(train_df[,-1]) %>% as.tibble() %>% 
+  mutate(diagnosis = train_df$diagnosis)
+x <- model.matrix(formula3, train_scaled)[,-1]
 
+y <- train_df$diagnosis %>% as.character() 
+y = if_else(y == "M", 1, 0)
+glmn_best <- glmnet(x, y, family = "binomial",
+                       alpha = 0.2, lambda = c(0.01407778,0.01407779))
+coef = coef(glmn_best) %>% as.matrix %>% as.data.frame()
+coef$term = rownames(coef)
+# coeffients of the final model
+coef = 
+  coef %>% as.tibble() %>% 
+  dplyr::select(term, s0) %>% 
+  rename(coef = s0) %>% 
+  filter(coef != 0, term != "(Intercept)") %>% 
+  arrange(desc(abs(coef)))
+coef
 
+```
+
+```{r}
+test.pred.prob  <- predict(glm.fit, newdata = dat[-rowTrain,],
+                           type = "response")
+test.pred <- rep("neg", length(test.pred.prob))
+test.pred[test.pred.prob > 0.5] <- "pos"
+
+sensitivity(data = as.factor(test.pred),
+            reference = dat$diabetes[-rowTrain])
+
+specificity(data = as.factor(test.pred),
+            reference = dat$diabetes[-rowTrain])
+
+# confusionMatrix(data = as.factor(test.pred),
+#                  reference = dat$diabetes[-rowTrain])
+
+# sens and spec are contained as well in confusion matrix
+confusionMatrix(data = as.factor(test.pred),
+                reference = dat$diabetes[-rowTrain],
+                positive = "pos") # be sure to specify positive class
+
+# Kappa = (P0 - Pe) / (1 - Pe), P0 = (a+d)/n, Pe = [(a+b)(a+c)+(c+d)(b+d)]/n^2
+# For rare diseases, accuracy is not good identifier, while Kappa gives more insight into the prediction prcess. Therefore, for imbalanced class label, Kappa is better.
+# Report accuracy and kappa. also focus on sens and spec (PPV and NPV)
+```
+
+We then plot the test ROC curve. You may (or may not) also consider to add a smoothed ROC curve.
+```{r}
+roc.glm <- roc(dat$diabetes[-rowTrain], test.pred.prob)
+plot.roc(roc.glm, legacy.axes = TRUE, print.auc = TRUE) # legacy.axes = TRUE: use 1- spec as x-axis
+#  AUC: area under the curve
+plot.roc(smooth(roc.glm), col = 4, add = TRUE)
+# add = TRUE: overlap other ROC curves
+```
 
 
 
