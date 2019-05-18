@@ -214,20 +214,21 @@ km <-kmeans(dat1, centers = 2, nstart = 20)
 In K-means clustering, we seek to partition the observations into apre-specified number of clusters
 ISimple and fast:  easy to understand and to implementITerminates at a local optimum - the global optimum is hard to findIThe algorithm is only applicable if the mean is definedIThe user needs to specifyKISensitive to outliersISometimes sensitive to initial seedsIThe algorithm is not suitable for discovering clusters that are nothyper-ellipsoids
 ```{r}
-dat1<-read.csv("data.csv")
-dat1<-dat1[,-2]
-dat1<-dat1[,-32]
-rownames(dat1) <- dat1[,1]
-dat1<-dat1[,-1]
-dat1<-dat1[,1:10]
-dat1 <-scale(dat1)
+dat1 <- read.csv("data.csv")
+class = paste(dat1[,2], 1:length(class))
+dat1 <- dat1[,-2]
+dat1 <- dat1[,-32]
+rownames(dat1) <- class
+dat1 <- dat1[,-1]
+dat1 <- dat1[,1:10]
+dat1 <- scale(dat1)
 fviz_nbclust(dat1,FUNcluster = kmeans,method = "silhouette")
 set.seed(1)
-km <-kmeans(dat1, centers = 2, nstart = 20)
-km_vis <-fviz_cluster(list(data = dat1, cluster = km$cluster),
+km <- kmeans(dat1, centers = 2, nstart = 20)
+km_vis <- fviz_cluster(list(data = dat1, cluster = km$cluster),
                       ellipse.type = "convex",
-                      geom =c("point","text"),
-                      labelsize = 5,palette = "Dark2")
+                      geom = c("point","text"),
+                      labelsize = 5, palette = "Dark2")
 km_vis
 ```
 
